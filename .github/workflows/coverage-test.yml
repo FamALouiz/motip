@@ -1,0 +1,30 @@
+name: Coverage Test
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    coverage:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v4
+
+            - name: Set up Python 3.12
+              uses: actions/setup-python@v4
+              with:
+                  python-version: "3.12"
+
+            - name: Install uv
+              run: pip install uv
+
+            - name: Install dev dependencies
+              run: uv sync --frozen
+
+            - name: Run tests with coverage
+              run: uv run pytest --cov --cov-report=term-missing --cov-report=xml
+
+            - name: Check coverage threshold
+              run: uv run coverage report --fail-under=90
