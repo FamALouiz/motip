@@ -9,3 +9,8 @@ wheels/
 # Virtual environments
 .venv
 .vscode
+
+# Coverage reports and test outputs
+.coverage
+htmlcov/
+*.log
