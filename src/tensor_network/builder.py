@@ -151,9 +151,14 @@ class TensorNetworkBuilder:
         }
         generation_info = {k: v for k, v in generation_info.items() if v != self.UNSET}
 
-        input_indices, output_indices, size_dict, shapes = ctg.utils.rand_equation(
+        input_indices, output_indices, shapes, size_dict = ctg.utils.rand_equation(
             **generation_info,
         )
+
+        assert isinstance(input_indices, list)
+        assert isinstance(output_indices, list)
+        assert isinstance(shapes, list)
+        assert isinstance(size_dict, dict)
 
         return TensorNetwork(
             input_indices=input_indices,
