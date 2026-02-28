@@ -285,6 +285,50 @@ class TestWithSeed:
         assert network1 == network2
 
 
+class TestWithGenerateArrays:
+    """Test the with_generate_arrays method of TensorNetworkBuilder."""
+
+    def test_default_unset_value_succeeds(self):
+        """Test that the default unset value for generate arrays succeeds."""
+        network = make_required_builder().build()
+
+        assert_required_network_from_builder(network)
+
+        with pytest.raises(ValueError, match="Arrays were not generated for this tensor network."):
+            _ = network.arrays
+
+    def test_set_value_succeeds(self):
+        """Test that setting the generate arrays flag succeeds."""
+        network = make_required_builder().with_generate_arrays().build()
+
+        assert_required_network_from_builder(network)
+        assert network.arrays is not None
+
+    def test_arrays_are_consistent_with_shapes_and_size_dict(self):
+        """Test that the generated arrays are consistent with the shapes and size dict."""
+        network = make_required_builder().with_generate_arrays().build()
+
+        assert network.arrays is not None
+        assert len(network.arrays) == len(network.input_indices)
+
+        for tensor_input_indices, shape, array in zip(
+            network.input_indices, network.shapes, network.arrays
+        ):
+            expected_shape = tuple(network.size_dict[idx] for idx in tensor_input_indices)
+            assert shape == expected_shape
+            assert array.shape == expected_shape
+
+    def test_same_seed_produces_same_arrays(self):
+        """Test that using the same seed produces the same arrays."""
+        builder = make_required_builder().with_generate_arrays().with_seed(123)
+        network1 = builder.build()
+        network2 = builder.build()
+
+        assert len(network1.arrays) == len(network2.arrays)
+        for a1, a2 in zip(network1.arrays, network2.arrays):
+            assert (a1 == a2).all()
+
+
 class TestOverallEdgeCases:
     """Test overall edge cases for TensorNetworkBuilder."""
 

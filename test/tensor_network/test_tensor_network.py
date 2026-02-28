@@ -36,14 +36,14 @@ class TestTensorNetwork:
                 _output_indices=[0],
                 _size_dict={0: 3, 1: 4, 2: 5},
                 _shapes=[(3, 4), (4, 5)],
-                _arrays=None,
+                _arrays=[np.ones((3, 4)), np.ones((4, 5))],
             ),
             (
                 [[0, 1], [1, 2]],
                 [0],
                 [(3, 4), (4, 5)],
                 {0: 3, 1: 4, 2: 5},
-                None,
+                [np.ones((3, 4)), np.ones((4, 5))],
             ),
         ],
     )
@@ -54,7 +54,7 @@ class TestTensorNetwork:
             _output_indices=[0],
             _size_dict={0: 3, 1: 4, 2: 5},
             _shapes=[(3, 4), (4, 5)],
-            _arrays=None,
+            _arrays=[np.ones((3, 4)), np.ones((4, 5))],
         )
 
         assert network == other
@@ -67,7 +67,7 @@ class TestTensorNetwork:
                 _output_indices=[0],
                 _size_dict={0: 3, 1: 4, 2: 5},
                 _shapes=[(3,), (4, 5)],
-                _arrays=None,
+                _arrays=[np.ones((3,)), np.ones((4, 5))],
             ),
             (
                 [[0], [1, 2]],
