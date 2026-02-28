@@ -433,10 +433,14 @@ dependencies = [
     { name = "networkx" },
     { name = "numpy" },
     { name = "optuna" },
-    { name = "pyrefly" },
     { name = "pytest" },
-    { name = "ruff" },
     { name = "scipy" },
+]
+
+[package.dev-dependencies]
+dev = [
+    { name = "pyrefly" },
+    { name = "ruff" },
 ]
 
 [package.metadata]
@@ -446,10 +450,14 @@ requires-dist = [
     { name = "networkx", specifier = ">=3.6.1" },
     { name = "numpy", specifier = ">=2.4.2" },
     { name = "optuna", specifier = ">=4.7.0" },
-    { name = "pyrefly", specifier = ">=0.54.0" },
     { name = "pytest", specifier = ">=9.0.2" },
-    { name = "ruff", specifier = ">=0.15.4" },
     { name = "scipy", specifier = ">=1.17.1" },
+]
+
+[package.metadata.requires-dev]
+dev = [
+    { name = "pyrefly", specifier = ">=0.54.0" },
+    { name = "ruff", specifier = ">=0.15.4" },
 ]
 
 [[package]]
