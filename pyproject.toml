@@ -36,5 +36,6 @@ project-includes = [
 [dependency-groups]
 dev = [
     "pyrefly>=0.54.0",
+    "pytest-cov>=7.0.0",
     "ruff>=0.15.4",
 ]
