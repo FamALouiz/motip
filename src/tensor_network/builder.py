@@ -1,7 +1,7 @@
 """Tensor network builder."""
 
 import cotengra as ctg
-from numpy import inf
+from numpy import inf, random
 
 from tensor_network import TensorNetwork
 
@@ -21,6 +21,7 @@ class TensorNetworkBuilder:
         self.__min_dimension_size = self.UNSET
         self.__max_dimension_size = self.UNSET
         self.__seed = self.UNSET
+        self.__generate_arrays = False
 
     def with_number_of_tensors(self, number_of_tensors: int) -> "TensorNetworkBuilder":
         """Set the number of tensors in the generated tensor network."""
@@ -68,6 +69,11 @@ class TensorNetworkBuilder:
     def with_seed(self, seed: int) -> "TensorNetworkBuilder":
         """Set the seed for random generation of the tensor network."""
         self.__seed = seed
+        return self
+
+    def with_generate_arrays(self) -> "TensorNetworkBuilder":
+        """Set whether to generate random arrays for the tensor network."""
+        self.__generate_arrays = True
         return self
 
     def __validate(self) -> None:
@@ -160,9 +166,14 @@ class TensorNetworkBuilder:
         assert isinstance(shapes, list)
         assert isinstance(size_dict, dict)
 
+        if self.__generate_arrays:
+            random.seed(self.__seed if self.__seed != self.UNSET else 0)
+            self.__arrays = [random.rand(*shape) for shape in shapes]
+
         return TensorNetwork(
-            input_indices=input_indices,
-            output_indices=output_indices,
-            size_dict=size_dict,
-            shapes=shapes,
+            _input_indices=input_indices,
+            _output_indices=output_indices,
+            _size_dict=size_dict,
+            _shapes=shapes,
+            _arrays=self.__arrays if self.__generate_arrays else None,
         )
