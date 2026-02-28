@@ -80,7 +80,11 @@ class TensorNetwork:
     def __eq__(self, other: object) -> bool:
         """Equality comparison for TensorNetwork."""
         if isinstance(other, TensorNetwork):
-            return self.as_tuple == other.as_tuple and self._arrays == other._arrays
+            return self.as_tuple[:-1] == other.as_tuple[:-1] and all(
+                (a1 == a2).all() for a1, a2 in zip(self._arrays or [], other._arrays or [])
+            )
         elif isinstance(other, tuple):
-            return self.as_tuple == other
+            return self.as_tuple[:-1] == other[:-1] and all(
+                (a1 == a2).all() for a1, a2 in zip(self._arrays or [], other[-1] or [])
+            )
         return NotImplemented
