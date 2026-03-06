@@ -1,0 +1,210 @@
+"""Tests for the Memory class."""
+
+import pytest
+
+from memory import Memory
+
+
+class TestMemoryConversions:
+    """Tests for numeric conversions in the Memory class."""
+
+    @pytest.mark.parametrize(
+        ("bytes_value", "expected"),
+        [
+            (0, 0),
+            (1, 1),
+            (1024, 1024),
+            (10 * 1024**3, 10 * 1024**3),
+        ],
+    )
+    def test_to_bytes(self, bytes_value: int, expected: int):
+        """Test conversion to bytes."""
+        memory = Memory(bytes_value)
+
+        assert memory.to_bytes() == expected
+
+    @pytest.mark.parametrize(
+        ("bytes_value", "expected"),
+        [
+            (0, 0.0),
+            (1, 1 / 1024),
+            (1024, 1.0),
+            (1536, 1.5),
+        ],
+    )
+    def test_to_kilobytes(self, bytes_value: int, expected: float):
+        """Test conversion to kilobytes."""
+        memory = Memory(bytes_value)
+
+        assert memory.to_kilobytes() == pytest.approx(expected)
+
+    @pytest.mark.parametrize(
+        ("bytes_value", "expected"),
+        [
+            (0, 0.0),
+            (1024**2, 1.0),
+            (3 * 1024**2, 3.0),
+            (1024**3, 1024.0),
+        ],
+    )
+    def test_to_megabytes(self, bytes_value: int, expected: float):
+        """Test conversion to megabytes."""
+        memory = Memory(bytes_value)
+
+        assert memory.to_megabytes() == pytest.approx(expected)
+
+    @pytest.mark.parametrize(
+        ("bytes_value", "expected"),
+        [
+            (0, 0.0),
+            (1024**3, 1.0),
+            (5 * 1024**3, 5.0),
+            (1024**4, 1024.0),
+        ],
+    )
+    def test_to_gigabytes(self, bytes_value: int, expected: float):
+        """Test conversion to gigabytes."""
+        memory = Memory(bytes_value)
+
+        assert memory.to_gigabytes() == pytest.approx(expected)
+
+    @pytest.mark.parametrize(
+        ("bytes_value", "expected"),
+        [
+            (0, 0.0),
+            (1024**4, 1.0),
+            (7 * 1024**4, 7.0),
+            (1024**5, 1024.0),
+        ],
+    )
+    def test_to_terabytes(self, bytes_value: int, expected: float):
+        """Test conversion to terabytes."""
+        memory = Memory(bytes_value)
+
+        assert memory.to_terabytes() == pytest.approx(expected)
+
+    @pytest.mark.parametrize(
+        ("bytes_value", "expected"),
+        [
+            (0, 0.0),
+            (1024**5, 1.0),
+            (2 * 1024**5, 2.0),
+            (1024**6, 1024.0),
+        ],
+    )
+    def test_to_petabytes(self, bytes_value: int, expected: float):
+        """Test conversion to petabytes."""
+        memory = Memory(bytes_value)
+
+        assert memory.to_petabytes() == pytest.approx(expected)
+
+    @pytest.mark.parametrize(
+        ("bytes_value", "expected"),
+        [
+            (0, 0.0),
+            (1024**6, 1.0),
+            (9 * 1024**6, 9.0),
+            (1024**7, 1024.0),
+        ],
+    )
+    def test_to_exabytes(self, bytes_value: int, expected: float):
+        """Test conversion to exabytes."""
+        memory = Memory(bytes_value)
+
+        assert memory.to_exabytes() == pytest.approx(expected)
+
+    @pytest.mark.parametrize(
+        ("bytes_value", "expected"),
+        [
+            (0, 0.0),
+            (1024**7, 1.0),
+            (3 * 1024**7, 3.0),
+            (1024**8, 1024.0),
+        ],
+    )
+    def test_to_zettabytes(self, bytes_value: int, expected: float):
+        """Test conversion to zettabytes."""
+        memory = Memory(bytes_value)
+
+        assert memory.to_zettabytes() == pytest.approx(expected)
+
+    @pytest.mark.parametrize(
+        ("bytes_value", "expected"),
+        [
+            (0, 0.0),
+            (1024**8, 1.0),
+            (11 * 1024**8, 11.0),
+        ],
+    )
+    def test_to_yottabytes(self, bytes_value: int, expected: float):
+        """Test conversion to yottabytes."""
+        memory = Memory(bytes_value)
+
+        assert memory.to_yottabytes() == pytest.approx(expected)
+
+
+class TestMemoryStringRepresentation:
+    """Tests for string representation of Memory."""
+
+    @pytest.mark.parametrize(
+        ("bytes_value", "expected"),
+        [
+            (0, "0 B"),
+            (1, "1.00 B"),
+            (1023, "1023.00 B"),
+            (1024, "1.00 KB"),
+            (1536, "1.50 KB"),
+            (1024**2, "1.00 MB"),
+            (1024**3, "1.00 GB"),
+            (1024**4, "1.00 TB"),
+            (1024**5, "1.00 PB"),
+            (1024**6, "1.00 EB"),
+            (1024**7, "1.00 ZB"),
+            (1024**8, "1.00 YB"),
+        ],
+    )
+    def test_str_representation(self, bytes_value: int, expected: str):
+        """Test string representation for values across all units."""
+        memory = Memory(bytes_value)
+
+        assert str(memory) == expected
+
+
+class TestMemoryFromString:
+    """Tests for Memory.from_string parsing behavior."""
+
+    @pytest.mark.parametrize(
+        ("memory_str", "expected_bytes"),
+        [
+            ("1B", 1),
+            ("1 KB", 1024),
+            ("1.5 MB", int(1.5 * 1024**2)),
+            ("2 gb", 2 * 1024**3),
+            (" 3 TB ", 3 * 1024**4),
+            ("0.5 pb", int(0.5 * 1024**5)),
+            ("1 EB", 1024**6),
+            ("1 ZB", 1024**7),
+            ("1 YB", 1024**8),
+        ],
+    )
+    def test_from_string_valid_inputs(self, memory_str: str, expected_bytes: int):
+        """Test valid memory string parsing for all units."""
+        memory = Memory.from_string(memory_str)
+
+        assert memory.to_bytes() == expected_bytes
+
+    @pytest.mark.parametrize(
+        "memory_str",
+        [
+            "",
+            "   ",
+            "1024",
+            "abc",
+            "1 XB",
+            "1.2.3 MB",
+        ],
+    )
+    def test_from_string_invalid_inputs_raise_value_error(self, memory_str: str):
+        """Test invalid memory strings raise ValueError."""
+        with pytest.raises(ValueError):
+            Memory.from_string(memory_str)
