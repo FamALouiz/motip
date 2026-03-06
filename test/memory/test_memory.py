@@ -187,3 +187,82 @@ class TestMemoryStringRepresentation:
         memory = Memory(bytes_value)
 
         assert str(memory) == expected
+
+
+class TestMemoryOperations:
+    """Tests for arithmetic operations on Memory."""
+
+    @pytest.mark.parametrize(
+        ("memory1", "memory2", "expected"),
+        [
+            (Memory(1024), Memory(2048), Memory(3072)),
+            (Memory(0), Memory(1024), Memory(1024)),
+            (Memory(512), Memory(512), Memory(1024)),
+        ],
+    )
+    def test_addition(self, memory1: Memory, memory2: Memory, expected: Memory):
+        """Test addition of two Memory instances."""
+        result = memory1 + memory2
+        result_rev = memory2 + memory1
+
+        assert result == expected
+        assert result_rev == expected
+
+    @pytest.mark.parametrize(
+        ("memory", "factor", "expected"),
+        [
+            (Memory(1024), 3, Memory(3072)),
+            (Memory(0), 5, Memory(0)),
+            (Memory(512), 2, Memory(1024)),
+        ],
+    )
+    def test_multiplication(self, memory: Memory, factor: int, expected: Memory):
+        """Test multiplication of Memory by an integer."""
+        result = memory * factor
+        result_rev = factor * memory
+
+        assert result == expected
+        assert result_rev == expected
+
+    @pytest.mark.parametrize(
+        ("memory", "divisor", "expected"),
+        [
+            (Memory(3072), 3, Memory(1024)),
+            (Memory(1025), 2, Memory(512)),
+            (Memory(0), 5, Memory(0)),
+        ],
+    )
+    def test_true_division(self, memory: Memory, divisor: int, expected: Memory):
+        """Test true division of Memory by an integer."""
+        result = memory / divisor
+
+        assert result == expected
+
+    @pytest.mark.parametrize(
+        ("memory", "divisor", "expected"),
+        [
+            (Memory(3072), 3, Memory(1024)),
+            (Memory(1025), 2, Memory(512)),
+            (Memory(0), 5, Memory(0)),
+        ],
+    )
+    def test_floor_division(self, memory: Memory, divisor: int, expected: Memory):
+        """Test floor division of Memory by an integer."""
+        result = memory // divisor
+
+        assert result == expected
+
+    @pytest.mark.parametrize(
+        ("memory", "divisor"),
+        [
+            (Memory(1024), 0),
+            (Memory(1), 0),
+        ],
+    )
+    def test_division_by_zero_raises(self, memory: Memory, divisor: int):
+        """Test that division by zero raises ZeroDivisionError."""
+        with pytest.raises(ZeroDivisionError):
+            _ = memory / divisor
+
+        with pytest.raises(ZeroDivisionError):
+            _ = memory // divisor
