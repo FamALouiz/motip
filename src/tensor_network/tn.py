@@ -1,9 +1,13 @@
 """Tensor network data structure."""
 
+from typing import Sequence
+from typing import TypeAlias
 from dataclasses import dataclass
 from typing import override
 
 from numpy import ndarray
+
+ContractionPath: TypeAlias = Sequence[tuple[int, int]]
 
 
 @dataclass

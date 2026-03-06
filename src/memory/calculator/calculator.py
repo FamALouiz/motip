@@ -1,8 +1,10 @@
 """Memory calculator for the motip package."""
 
-from tensor_network import TensorNetwork
-from memory import Memory
 import math
+
+from memory import Memory
+from tensor_network import TensorNetwork
+from tensor_network.tn import ContractionPath
 
 
 class MemoryCalculator:
@@ -55,7 +57,7 @@ class MemoryCalculator:
         return MemoryCalculator.__element_size_in_bytes * total_elements  # type: ignore
 
     def calculate_peak_memory(
-        self, network: TensorNetwork, contraction_path: list[tuple[int, int]]
+        self, network: TensorNetwork, contraction_path: ContractionPath
     ) -> Memory:
         """Calculate the peak memory requirements of a tensor network contraction.
 
@@ -78,7 +80,7 @@ class MemoryCalculator:
         return peak_memory
 
     def calculate_total_memory(
-        self, network: TensorNetwork, contraction_path: list[tuple[int, int]]
+        self, network: TensorNetwork, contraction_path: ContractionPath
     ) -> Memory:
         """Calculate the total memory requirements of a tensor network.
 
@@ -96,7 +98,7 @@ class MemoryCalculator:
         raise NotImplementedError("Memory calculation is not yet implemented.")
 
     def calculate_peak_memory_with_disk_writeback(
-        self, network: TensorNetwork, contraction_path: list[tuple[int, int]]
+        self, network: TensorNetwork, contraction_path: ContractionPath
     ) -> Memory:
         """Calculate the peak memory requirements of a tn contraction with disk writeback.
 
@@ -117,7 +119,7 @@ class MemoryCalculator:
         raise NotImplementedError("Memory calculation is not yet implemented.")
 
     def calculate_total_memory_with_disk_writeback(
-        self, network: TensorNetwork, contraction_path: list[tuple[int, int]]
+        self, network: TensorNetwork, contraction_path: ContractionPath
     ) -> Memory:
         """Calculate the total memory requirements of a tn contraction with disk writeback.
 
