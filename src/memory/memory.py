@@ -39,6 +39,38 @@ class Memory:
                 return f"{value:.2f} {unit.name}"
         return f"{self.bytes} B"
 
+    def __add__(self, other: "Memory") -> "Memory":
+        """Add two Memory instances."""
+        if not isinstance(other, Memory):
+            return NotImplemented
+        return Memory(self.bytes + other.bytes)
+
+    def __radd__(self, other: "Memory") -> "Memory":
+        """Add two Memory instances (reflected)."""
+        return self.__add__(other)
+
+    def __mul__(self, other: int) -> "Memory":
+        """Multiply Memory by an integer."""
+        if not isinstance(other, int):
+            return NotImplemented
+        return Memory(self.bytes * other)
+
+    def __rmul__(self, other: int) -> "Memory":
+        """Multiply Memory by an integer (reflected)."""
+        return self.__mul__(other)
+
+    def __truediv__(self, other: int) -> "Memory":
+        """Divide Memory by an integer."""
+        if not isinstance(other, int):
+            return NotImplemented
+        return Memory(self.bytes // other)
+
+    def __floordiv__(self, other: int) -> "Memory":
+        """Floor divide Memory by an integer."""
+        if not isinstance(other, int):
+            return NotImplemented
+        return Memory(self.bytes // other)
+
     @property
     def to_bytes(self) -> int:
         """Return the memory in bytes."""
