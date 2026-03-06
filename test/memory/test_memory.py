@@ -2,7 +2,7 @@
 
 import pytest
 
-from memory import Memory
+from memory import Memory, get_memory_from_string
 
 
 class TestMemory:
@@ -11,7 +11,7 @@ class TestMemory:
     def test_init(self):
         """Test initialization of the Memory class."""
         memory = Memory(1024)
-        assert memory.to_bytes() == 1024
+        assert memory.to_bytes == 1024
 
     def test_init_negative(self):
         """Test initialization with a negative value."""
@@ -21,7 +21,7 @@ class TestMemory:
     def test_init_zero(self):
         """Test initialization with zero."""
         memory = Memory(0)
-        assert memory.to_bytes() == 0
+        assert memory.to_bytes == 0
 
 
 class TestMemoryConversions:
@@ -40,7 +40,7 @@ class TestMemoryConversions:
         """Test conversion to bytes."""
         memory = Memory(bytes_value)
 
-        assert memory.to_bytes() == expected
+        assert memory.to_bytes == expected
 
     @pytest.mark.parametrize(
         ("bytes_value", "expected"),
@@ -55,7 +55,7 @@ class TestMemoryConversions:
         """Test conversion to kilobytes."""
         memory = Memory(bytes_value)
 
-        assert memory.to_kilobytes() == pytest.approx(expected)
+        assert memory.to_kilobytes == pytest.approx(expected)
 
     @pytest.mark.parametrize(
         ("bytes_value", "expected"),
@@ -70,7 +70,7 @@ class TestMemoryConversions:
         """Test conversion to megabytes."""
         memory = Memory(bytes_value)
 
-        assert memory.to_megabytes() == pytest.approx(expected)
+        assert memory.to_megabytes == pytest.approx(expected)
 
     @pytest.mark.parametrize(
         ("bytes_value", "expected"),
@@ -85,7 +85,7 @@ class TestMemoryConversions:
         """Test conversion to gigabytes."""
         memory = Memory(bytes_value)
 
-        assert memory.to_gigabytes() == pytest.approx(expected)
+        assert memory.to_gigabytes == pytest.approx(expected)
 
     @pytest.mark.parametrize(
         ("bytes_value", "expected"),
@@ -100,7 +100,7 @@ class TestMemoryConversions:
         """Test conversion to terabytes."""
         memory = Memory(bytes_value)
 
-        assert memory.to_terabytes() == pytest.approx(expected)
+        assert memory.to_terabytes == pytest.approx(expected)
 
     @pytest.mark.parametrize(
         ("bytes_value", "expected"),
@@ -115,7 +115,7 @@ class TestMemoryConversions:
         """Test conversion to petabytes."""
         memory = Memory(bytes_value)
 
-        assert memory.to_petabytes() == pytest.approx(expected)
+        assert memory.to_petabytes == pytest.approx(expected)
 
     @pytest.mark.parametrize(
         ("bytes_value", "expected"),
@@ -130,7 +130,7 @@ class TestMemoryConversions:
         """Test conversion to exabytes."""
         memory = Memory(bytes_value)
 
-        assert memory.to_exabytes() == pytest.approx(expected)
+        assert memory.to_exabytes == pytest.approx(expected)
 
     @pytest.mark.parametrize(
         ("bytes_value", "expected"),
@@ -145,7 +145,7 @@ class TestMemoryConversions:
         """Test conversion to zettabytes."""
         memory = Memory(bytes_value)
 
-        assert memory.to_zettabytes() == pytest.approx(expected)
+        assert memory.to_zettabytes == pytest.approx(expected)
 
     @pytest.mark.parametrize(
         ("bytes_value", "expected"),
@@ -159,7 +159,7 @@ class TestMemoryConversions:
         """Test conversion to yottabytes."""
         memory = Memory(bytes_value)
 
-        assert memory.to_yottabytes() == pytest.approx(expected)
+        assert memory.to_yottabytes == pytest.approx(expected)
 
 
 class TestMemoryStringRepresentation:
@@ -208,9 +208,9 @@ class TestMemoryFromString:
     )
     def test_from_string_valid_inputs(self, memory_str: str, expected_bytes: int):
         """Test valid memory string parsing for all units."""
-        memory = Memory.from_string(memory_str)
+        memory = get_memory_from_string(memory_str)
 
-        assert memory.to_bytes() == expected_bytes
+        assert memory.to_bytes == expected_bytes
 
     @pytest.mark.parametrize(
         "memory_str",
@@ -226,4 +226,4 @@ class TestMemoryFromString:
     def test_from_string_invalid_inputs_raise_value_error(self, memory_str: str):
         """Test invalid memory strings raise ValueError."""
         with pytest.raises(ValueError):
-            Memory.from_string(memory_str)
+            get_memory_from_string(memory_str)

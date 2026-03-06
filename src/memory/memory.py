@@ -1,82 +1,96 @@
 """Memory class for the motip package."""
 
+from dataclasses import dataclass
+from enum import IntEnum
 
+
+class MemorySizes(IntEnum):
+    """Memory size units and their corresponding byte values."""
+
+    B = 1
+    KB = 1024
+    MB = 1024**2
+    GB = 1024**3
+    TB = 1024**4
+    PB = 1024**5
+    EB = 1024**6
+    ZB = 1024**7
+    YB = 1024**8
+
+
+def get_memory_from_string(memory_str: str) -> "Memory":
+    """Create a Memory object from a string representation."""
+    memory_str = memory_str.strip().upper()
+    for unit in reversed(MemorySizes):
+        if memory_str.endswith(unit.name):
+            value = float(memory_str[: -len(unit.name)].strip())
+            bytes_value = int(value * unit)
+            return Memory(bytes_value)
+    raise ValueError(f"Invalid memory string: {memory_str}")
+
+
+@dataclass
 class Memory:
     """Memory information in bytes."""
 
-    __MEMORY_CONVERSION = {
-        "B": 1,
-        "KB": 1024,
-        "MB": 1024**2,
-        "GB": 1024**3,
-        "TB": 1024**4,
-        "PB": 1024**5,
-        "EB": 1024**6,
-        "ZB": 1024**7,
-        "YB": 1024**8,
-    }
+    bytes: int
 
-    def __init__(self, bytes: int) -> None:
-        """Initialize the memory."""
-        self.__bytes = bytes
-        self.__validate_bytes()
-
-    def __validate_bytes(self):
+    def __post_init__(self):
         """Validate the memory value."""
-        if self.__bytes < 0:
+        if not isinstance(self.bytes, int):
+            raise TypeError("Memory value must be an integer.")
+        if self.bytes < 0:
             raise ValueError("Memory value cannot be negative.")
 
     def __str__(self) -> str:
         """Return a human-readable string representation of the memory."""
-        for unit in reversed(self.__MEMORY_CONVERSION):
-            if self.__bytes >= self.__MEMORY_CONVERSION[unit]:
-                value = self.__bytes / self.__MEMORY_CONVERSION[unit]
-                return f"{value:.2f} {unit}"
-        return f"{self.__bytes} B"
+        for unit in reversed(MemorySizes):
+            if self.bytes >= MemorySizes(unit):
+                value = self.bytes / MemorySizes(unit)
+                return f"{value:.2f} {unit.name}"
+        return f"{self.bytes} B"
 
+    @property
     def to_bytes(self) -> int:
         """Return the memory in bytes."""
-        return self.__bytes
+        return self.bytes
 
+    @property
     def to_kilobytes(self) -> float:
         """Return the memory in kilobytes."""
-        return self.__bytes / self.__MEMORY_CONVERSION["KB"]
+        return self.bytes / MemorySizes.KB
 
+    @property
     def to_megabytes(self) -> float:
         """Return the memory in megabytes."""
-        return self.__bytes / self.__MEMORY_CONVERSION["MB"]
+        return self.bytes / MemorySizes.MB
 
+    @property
     def to_gigabytes(self) -> float:
         """Return the memory in gigabytes."""
-        return self.__bytes / self.__MEMORY_CONVERSION["GB"]
+        return self.bytes / MemorySizes.GB
 
+    @property
     def to_terabytes(self) -> float:
         """Return the memory in terabytes."""
-        return self.__bytes / self.__MEMORY_CONVERSION["TB"]
+        return self.bytes / MemorySizes.TB
 
+    @property
     def to_petabytes(self) -> float:
         """Return the memory in petabytes."""
-        return self.__bytes / self.__MEMORY_CONVERSION["PB"]
+        return self.bytes / MemorySizes.PB
 
+    @property
     def to_exabytes(self) -> float:
         """Return the memory in exabytes."""
-        return self.__bytes / self.__MEMORY_CONVERSION["EB"]
+        return self.bytes / MemorySizes.EB
 
+    @property
     def to_zettabytes(self) -> float:
         """Return the memory in zettabytes."""
-        return self.__bytes / self.__MEMORY_CONVERSION["ZB"]
+        return self.bytes / MemorySizes.ZB
 
+    @property
     def to_yottabytes(self) -> float:
         """Return the memory in yottabytes."""
-        return self.__bytes / self.__MEMORY_CONVERSION["YB"]
-
-    @staticmethod
-    def from_string(memory_str: str) -> "Memory":
-        """Create a Memory object from a string representation."""
-        memory_str = memory_str.strip().upper()
-        for unit in reversed(Memory.__MEMORY_CONVERSION):
-            if memory_str.endswith(unit):
-                value = float(memory_str[: -len(unit)].strip())
-                bytes_value = int(value * Memory.__MEMORY_CONVERSION[unit])
-                return Memory(bytes_value)
-        raise ValueError(f"Invalid memory string: {memory_str}")
+        return self.bytes / MemorySizes.YB
