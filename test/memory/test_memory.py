@@ -5,6 +5,25 @@ import pytest
 from memory import Memory
 
 
+class TestMemory:
+    """Tests for the Memory class."""
+
+    def test_init(self):
+        """Test initialization of the Memory class."""
+        memory = Memory(1024)
+        assert memory.to_bytes() == 1024
+
+    def test_init_negative(self):
+        """Test initialization with a negative value."""
+        with pytest.raises(ValueError):
+            Memory(-1)
+
+    def test_init_zero(self):
+        """Test initialization with zero."""
+        memory = Memory(0)
+        assert memory.to_bytes() == 0
+
+
 class TestMemoryConversions:
     """Tests for numeric conversions in the Memory class."""
 

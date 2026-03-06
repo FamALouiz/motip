@@ -19,6 +19,12 @@ class Memory:
     def __init__(self, bytes: int) -> None:
         """Initialize the memory."""
         self.__bytes = bytes
+        self.__validate_bytes()
+
+    def __validate_bytes(self):
+        """Validate the memory value."""
+        if self.__bytes < 0:
+            raise ValueError("Memory value cannot be negative.")
 
     def __str__(self) -> str:
         """Return a human-readable string representation of the memory."""
