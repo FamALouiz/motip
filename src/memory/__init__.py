@@ -1,6 +1,7 @@
 """Memory module for the motip package."""
 
-from .memory import Memory, get_memory_from_string
+from .memory import Memory, MemorySizes
+from . import utils
 from . import calculator
 
-__all__ = ["Memory", "get_memory_from_string", "calculator"]
+__all__ = ["Memory", "MemorySizes", "utils", "calculator"]
