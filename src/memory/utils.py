@@ -1,6 +1,6 @@
 """Utility functions for memory operations."""
 
-from .memory import Memory, MemorySizes
+from memory.memory import Memory, MemorySizes
 
 
 def get_memory_from_string(memory_str: str) -> Memory:

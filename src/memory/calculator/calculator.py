@@ -3,10 +3,9 @@
 import math
 from copy import deepcopy
 
+from memory.memory import Memory
 from tensor_network import ContractionPath, TensorNetwork
 from tensor_network.utils.contraction import contract_pair
-
-from ..memory import Memory
 
 
 class MemoryCalculator:
