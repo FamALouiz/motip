@@ -1,7 +1,8 @@
 """Tests for the memory utilities."""
 
-from memory.utils import get_memory_from_string
 import pytest
+
+from memory.utils import get_memory_from_string
 
 
 class TestMemoryFromString:

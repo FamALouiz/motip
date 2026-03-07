@@ -1,7 +1,7 @@
 """Tests for the random tensor network generation utility."""
 
-from tensor_network.utils.random import generate_random_tn
 from tensor_network import TensorNetwork
+from tensor_network.utils.random import generate_random_tn
 
 
 class TestRandomTNGeneration:

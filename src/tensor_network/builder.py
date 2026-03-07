@@ -3,7 +3,7 @@
 import cotengra as ctg
 from numpy import inf, random
 
-from tensor_network import TensorNetwork
+from .tn import TensorNetwork
 
 
 class TensorNetworkBuilder:

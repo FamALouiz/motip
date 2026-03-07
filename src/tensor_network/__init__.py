@@ -1,6 +1,6 @@
 """Tensor network module."""
 
-from .tn import TensorNetwork
 from . import builder
+from .tn import ContractionPath, TensorNetwork
 
-__all__ = ["TensorNetwork", "builder"]
+__all__ = ["TensorNetwork", "ContractionPath", "builder"]
