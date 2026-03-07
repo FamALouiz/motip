@@ -1,10 +1,12 @@
 """Memory calculator for the motip package."""
 
 import math
+from copy import deepcopy
 
-from memory import Memory
-from tensor_network import TensorNetwork
-from tensor_network.tn import ContractionPath
+from tensor_network import ContractionPath, TensorNetwork
+from tensor_network.utils.contraction import contract_pair
+
+from ..memory import Memory
 
 
 class MemoryCalculator:
@@ -54,11 +56,37 @@ class MemoryCalculator:
             The initial memory requirements.
         """
         total_elements = sum(math.prod(tensor_shape) for tensor_shape in network.shapes)
-        return MemoryCalculator.__element_size_in_bytes * total_elements  # type: ignore
+        return MemoryCalculator.__element_size_in_bytes * total_elements
 
-    def calculate_peak_memory(
-        self, network: TensorNetwork, contraction_path: ContractionPath
+    def __calculate_memory_for_contraction_pair(
+        self, network: TensorNetwork, contraction_pair: tuple[int, int]
     ) -> Memory:
+        """Calculate the memory requirements for a single contraction pair."""
+        contracted_indices = set(network.input_indices[contraction_pair[0]]) & set(
+            network.input_indices[contraction_pair[1]]
+        )
+
+        new_tensor_indices = (
+            set(network.input_indices[contraction_pair[0]])
+            | set(network.input_indices[contraction_pair[1]])
+        ) - contracted_indices
+
+        new_tensor_shape = tuple(network.size_dict[index] for index in new_tensor_indices)
+        new_tensor_elements = math.prod(new_tensor_shape)
+
+        return MemoryCalculator.__element_size_in_bytes * new_tensor_elements
+
+    def __calculate_memory_for_unused_tensors(
+        self, network: TensorNetwork, contraction_pair: tuple[int, int]
+    ) -> Memory:
+        """Calculate the memory for tensors that are no longer used after a contraction."""
+        total_elements_to_remove = sum(
+            math.prod(network.shapes[tensor_idx]) for tensor_idx in contraction_pair
+        )
+
+        return MemoryCalculator.__element_size_in_bytes * total_elements_to_remove
+
+    def calculate_peak_memory(self, tn: TensorNetwork, contraction_path: ContractionPath) -> Memory:
         """Calculate the peak memory requirements of a tensor network contraction.
 
         This method will calculate the memory requirements of a tensor network contraction by
@@ -69,18 +97,26 @@ class MemoryCalculator:
         usage) during the contraction process.
 
         Args:
-            network: The tensor network for which to calculate memory requirements.
+            tn: The tensor network for which to calculate memory requirements.
             contraction_path: A list of pairs of tensor indices that are contracted together.
 
         Returns:
             The memory requirements.
         """
-        peak_memory = self.__calculate_intial_memory_requirements(network)
+        network: TensorNetwork = deepcopy(tn)
+        total_memory: Memory = self.__calculate_intial_memory_requirements(network)
+        peak_memory: Memory = total_memory
+
+        for contraction_pair in contraction_path:
+            total_memory += self.__calculate_memory_for_contraction_pair(network, contraction_pair)
+            peak_memory = max(peak_memory, total_memory)
+            total_memory -= self.__calculate_memory_for_unused_tensors(network, contraction_pair)
+            network = contract_pair(network, contraction_pair)
 
         return peak_memory
 
     def calculate_total_memory(
-        self, network: TensorNetwork, contraction_path: ContractionPath
+        self, tn: TensorNetwork, contraction_path: ContractionPath
     ) -> Memory:
         """Calculate the total memory requirements of a tensor network.
 
@@ -89,13 +125,20 @@ class MemoryCalculator:
         loaded in memory and that no intermediate results are written to disk.
 
         Args:
-            network: The tensor network for which to calculate memory requirements.
+            tn: The tensor network for which to calculate memory requirements.
             contraction_path: A list of pairs of tensor indices that are contracted together.
 
         Returns:
             The total memory requirements.
         """
-        raise NotImplementedError("Memory calculation is not yet implemented.")
+        network: TensorNetwork = deepcopy(tn)
+        total_memory: Memory = self.__calculate_intial_memory_requirements(network)
+
+        for contraction_pair in contraction_path:
+            total_memory += self.__calculate_memory_for_contraction_pair(network, contraction_pair)
+            network = contract_pair(network, contraction_pair)
+
+        return total_memory
 
     def calculate_peak_memory_with_disk_writeback(
         self, network: TensorNetwork, contraction_path: ContractionPath
