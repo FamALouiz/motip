@@ -22,7 +22,7 @@ authors = [
 line-length = 100
 
 [tool.ruff.lint]
-select = ["E", "F", "D"]
+select = ["E", "F", "D", "I"]
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
