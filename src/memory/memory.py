@@ -87,6 +87,30 @@ class Memory:
             return NotImplemented
         return Memory(self.bytes // other)
 
+    def __gt__(self, other: "Memory") -> bool:
+        """Compare if this Memory instance is greater than another."""
+        if not isinstance(other, Memory):
+            return NotImplemented
+        return self.bytes > other.bytes
+
+    def __lt__(self, other: "Memory") -> bool:
+        """Compare if this Memory instance is less than another."""
+        if not isinstance(other, Memory):
+            return NotImplemented
+        return self.bytes < other.bytes
+
+    def __ge__(self, other: "Memory") -> bool:
+        """Compare if this Memory instance is greater than or equal to another."""
+        if not isinstance(other, Memory):
+            return NotImplemented
+        return self.bytes >= other.bytes
+
+    def __le__(self, other: "Memory") -> bool:
+        """Compare if this Memory instance is less than or equal to another."""
+        if not isinstance(other, Memory):
+            return NotImplemented
+        return self.bytes <= other.bytes
+
     @property
     def to_bytes(self) -> int:
         """Return the memory in bytes."""
