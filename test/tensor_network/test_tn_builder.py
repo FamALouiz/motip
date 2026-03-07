@@ -1,11 +1,10 @@
 """Test the TensorNetworkBuilder class."""
 
+import numpy as np
 import pytest
 
 from tensor_network import TensorNetwork
 from tensor_network.builder import TensorNetworkBuilder
-
-import numpy as np
 
 
 def make_required_builder() -> TensorNetworkBuilder:

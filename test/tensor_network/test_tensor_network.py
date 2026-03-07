@@ -1,9 +1,9 @@
 """Test the TensorNetwork class."""
 
-import pytest
-from tensor_network import TensorNetwork
-
 import numpy as np
+import pytest
+
+from tensor_network import TensorNetwork
 
 
 class TestTensorNetwork:
@@ -12,11 +12,11 @@ class TestTensorNetwork:
     def test_tensor_network_as_tuple(self):
         """Test that the as_tuple method returns the correct shape."""
         network = TensorNetwork(
-            _input_indices=[[0, 1], [1, 2]],
-            _output_indices=[0],
-            _size_dict={0: 3, 1: 4, 2: 5},
-            _shapes=[(3, 4), (4, 5)],
-            _arrays=None,
+            input_indices=[[0, 1], [1, 2]],
+            output_indices=[0],
+            size_dict={0: 3, 1: 4, 2: 5},
+            shapes=[(3, 4), (4, 5)],
+            tensor_arrays=None,
         )
 
         expected_tuple = (
@@ -32,11 +32,11 @@ class TestTensorNetwork:
         "other",
         [
             TensorNetwork(
-                _input_indices=[[0, 1], [1, 2]],
-                _output_indices=[0],
-                _size_dict={0: 3, 1: 4, 2: 5},
-                _shapes=[(3, 4), (4, 5)],
-                _arrays=[np.ones((3, 4)), np.ones((4, 5))],
+                input_indices=[[0, 1], [1, 2]],
+                output_indices=[0],
+                size_dict={0: 3, 1: 4, 2: 5},
+                shapes=[(3, 4), (4, 5)],
+                tensor_arrays=[np.ones((3, 4)), np.ones((4, 5))],
             ),
             (
                 [[0, 1], [1, 2]],
@@ -50,11 +50,11 @@ class TestTensorNetwork:
     def test_tensor_network_equality_succeeds(self, other):
         """Test the equality comparison of TensorNetwork."""
         network = TensorNetwork(
-            _input_indices=[[0, 1], [1, 2]],
-            _output_indices=[0],
-            _size_dict={0: 3, 1: 4, 2: 5},
-            _shapes=[(3, 4), (4, 5)],
-            _arrays=[np.ones((3, 4)), np.ones((4, 5))],
+            input_indices=[[0, 1], [1, 2]],
+            output_indices=[0],
+            size_dict={0: 3, 1: 4, 2: 5},
+            shapes=[(3, 4), (4, 5)],
+            tensor_arrays=[np.ones((3, 4)), np.ones((4, 5))],
         )
 
         assert network == other
@@ -63,11 +63,11 @@ class TestTensorNetwork:
         "other",
         [
             TensorNetwork(
-                _input_indices=[[0], [1, 2]],
-                _output_indices=[0],
-                _size_dict={0: 3, 1: 4, 2: 5},
-                _shapes=[(3,), (4, 5)],
-                _arrays=[np.ones((3,)), np.ones((4, 5))],
+                input_indices=[[0], [1, 2]],
+                output_indices=[0],
+                size_dict={0: 3, 1: 4, 2: 5},
+                shapes=[(3,), (4, 5)],
+                tensor_arrays=[np.ones((3,)), np.ones((4, 5))],
             ),
             (
                 [[0], [1, 2]],
@@ -82,11 +82,11 @@ class TestTensorNetwork:
     def test_tensor_network_equality_fails(self, other):
         """Test that the equality comparison fails for inequivalent and non-TN objects."""
         network = TensorNetwork(
-            _input_indices=[[0, 1], [1, 2]],
-            _output_indices=[0],
-            _size_dict={0: 3, 1: 4, 2: 5},
-            _shapes=[(3, 4), (4, 5)],
-            _arrays=None,
+            input_indices=[[0, 1], [1, 2]],
+            output_indices=[0],
+            size_dict={0: 3, 1: 4, 2: 5},
+            shapes=[(3, 4), (4, 5)],
+            tensor_arrays=None,
         )
 
         assert network != other
@@ -94,11 +94,11 @@ class TestTensorNetwork:
     def test_tensor_network_arrays_property(self):
         """Test that the arrays property raises an error when arrays are not generated."""
         network = TensorNetwork(
-            _input_indices=[[0, 1], [1, 2]],
-            _output_indices=[0],
-            _size_dict={0: 3, 1: 4, 2: 5},
-            _shapes=[(3, 4), (4, 5)],
-            _arrays=None,
+            input_indices=[[0, 1], [1, 2]],
+            output_indices=[0],
+            size_dict={0: 3, 1: 4, 2: 5},
+            shapes=[(3, 4), (4, 5)],
+            tensor_arrays=None,
         )
 
         with pytest.raises(
@@ -112,11 +112,11 @@ class TestTensorNetwork:
         random_tensor_1 = np.random.rand(3, 4)
         random_tensor_2 = np.random.rand(4, 5)
         network = TensorNetwork(
-            _input_indices=[[0, 1], [1, 2]],
-            _output_indices=[0],
-            _size_dict={0: 3, 1: 4, 2: 5},
-            _shapes=[(3, 4), (4, 5)],
-            _arrays=[random_tensor_1, random_tensor_2],
+            input_indices=[[0, 1], [1, 2]],
+            output_indices=[0],
+            size_dict={0: 3, 1: 4, 2: 5},
+            shapes=[(3, 4), (4, 5)],
+            tensor_arrays=[random_tensor_1, random_tensor_2],
         )
 
         assert network.num_tensors == 2
@@ -130,9 +130,9 @@ class TestTensorNetwork:
         """Test that mismatching information raises an error."""
         with pytest.raises(ValueError):
             TensorNetwork(
-                _input_indices=[[0, 1], [1, 2]],
-                _output_indices=[0],
-                _size_dict={0: 3, 1: 4, 2: 5},
-                _shapes=[(3, 4)],
-                _arrays=[np.random.rand(3, 4), np.random.rand(4, 5)],
+                input_indices=[[0, 1], [1, 2]],
+                output_indices=[0],
+                size_dict={0: 3, 1: 4, 2: 5},
+                shapes=[(3, 4)],
+                tensor_arrays=[np.random.rand(3, 4), np.random.rand(4, 5)],
             )
