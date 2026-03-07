@@ -49,6 +49,22 @@ class Memory:
         """Add two Memory instances (reflected)."""
         return self.__add__(other)
 
+    def __sub__(self, other: "Memory") -> "Memory":
+        """Subtract one Memory instance from another."""
+        if not isinstance(other, Memory):
+            return NotImplemented
+        if self.bytes < other.bytes:
+            raise ValueError("Resulting Memory cannot be negative.")
+        return Memory(self.bytes - other.bytes)
+
+    def __rsub__(self, other: "Memory") -> "Memory":
+        """Subtract one Memory instance from another (reflected)."""
+        if not isinstance(other, Memory):
+            return NotImplemented
+        if other.bytes < self.bytes:
+            raise ValueError("Resulting Memory cannot be negative.")
+        return Memory(other.bytes - self.bytes)
+
     def __mul__(self, other: int) -> "Memory":
         """Multiply Memory by an integer."""
         if not isinstance(other, int):
