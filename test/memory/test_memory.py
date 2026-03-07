@@ -209,6 +209,24 @@ class TestMemoryOperations:
         assert result_rev == expected
 
     @pytest.mark.parametrize(
+        ("memory1", "memory2", "expected"),
+        [
+            (Memory(3072), Memory(1024), Memory(2048)),
+            (Memory(1024), Memory(512), Memory(512)),
+        ],
+    )
+    def test_subtraction(self, memory1: Memory, memory2: Memory, expected: Memory):
+        """Test subtraction of two Memory instances."""
+        result = memory1 - memory2
+
+        assert result == expected
+
+    def test_subtraction_negative_result_raises(self):
+        """Test that subtraction resulting in negative Memory raises ValueError."""
+        with pytest.raises(ValueError):
+            _ = Memory(1024) - Memory(2048)
+
+    @pytest.mark.parametrize(
         ("memory", "factor", "expected"),
         [
             (Memory(1024), 3, Memory(3072)),
