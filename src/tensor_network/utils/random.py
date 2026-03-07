@@ -7,7 +7,18 @@ from tensor_network.builder import TensorNetworkBuilder
 def generate_random_tn(
     num_tensors: int, average_rank: int, max_dim: int, seed: int = 42, generate_arrays: bool = False
 ) -> TensorNetwork:
-    """Generate a random tensor network."""
+    """Generate a random tensor network.
+
+    Args:
+        num_tensors: Number of tensors in the network.
+        average_rank: Average number of indices per tensor.
+        max_dim: Maximum dimension size for any index.
+        seed: Random seed for reproducibility.
+        generate_arrays: Whether to generate random arrays for the tensors.
+
+    Returns:
+        A randomly generated TensorNetwork instance.
+    """
     builder = (
         TensorNetworkBuilder()
         .with_number_of_tensors(num_tensors)
