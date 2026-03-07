@@ -16,7 +16,7 @@ class TensorNetwork:
     output_indices: list[int]
     shapes: list[tuple[int, ...]]
     size_dict: dict[int, int]
-    arrays: list[ndarray] | None
+    tensor_arrays: list[ndarray] | None
 
     def __post_init__(self):
         """Validate the tensor network data."""
@@ -41,7 +41,7 @@ class TensorNetwork:
             self.output_indices,
             self.shapes,
             self.size_dict,
-            self.arrays,
+            self.tensor_arrays,
         )
 
     @property
@@ -52,21 +52,22 @@ class TensorNetwork:
     @property
     def arrays(self) -> list[ndarray]:
         """Arrays in the tensor network."""
-        if self.arrays is None:
+        if self.tensor_arrays is None:
             raise ValueError(
                 "Arrays were not generated for this tensor network. Only metadata is available."
             )
-        return self.arrays
+        return self.tensor_arrays
 
     @override
     def __eq__(self, other: object) -> bool:
         """Equality comparison for TensorNetwork."""
         if isinstance(other, TensorNetwork):
             return self.as_tuple[:-1] == other.as_tuple[:-1] and all(
-                (a1 == a2).all() for a1, a2 in zip(self.arrays or [], other.arrays or [])
+                (a1 == a2).all()
+                for a1, a2 in zip(self.tensor_arrays or [], other.tensor_arrays or [])
             )
         elif isinstance(other, tuple):
             return self.as_tuple[:-1] == other[:-1] and all(
-                (a1 == a2).all() for a1, a2 in zip(self.arrays or [], other[-1] or [])
+                (a1 == a2).all() for a1, a2 in zip(self.tensor_arrays or [], other[-1] or [])
             )
         return NotImplemented

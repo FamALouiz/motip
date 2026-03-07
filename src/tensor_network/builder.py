@@ -170,10 +170,12 @@ class TensorNetworkBuilder:
             random.seed(self.__seed if self.__seed != self.UNSET else 0)
             self.__arrays = [random.rand(*shape) for shape in shapes]
 
-        return TensorNetwork(
-            _input_indices=input_indices,
-            _output_indices=output_indices,
-            _size_dict=size_dict,
-            _shapes=shapes,
-            _arrays=self.__arrays if self.__generate_arrays else None,
+        resulting_tn = TensorNetwork(
+            input_indices=input_indices,
+            output_indices=output_indices,
+            size_dict=size_dict,
+            shapes=shapes,
+            tensor_arrays=self.__arrays if self.__generate_arrays else None,
         )
+
+        return resulting_tn
