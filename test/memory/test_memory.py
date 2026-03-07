@@ -221,7 +221,7 @@ class TestMemoryOperations:
 
         assert result == expected
 
-    def test_subtraction_negative_result_raises(self):
+    def test_subtraction_negative_result_raises_value_error(self):
         """Test that subtraction resulting in negative Memory raises ValueError."""
         with pytest.raises(ValueError):
             _ = Memory(1024) - Memory(2048)
@@ -277,7 +277,7 @@ class TestMemoryOperations:
             (Memory(1), 0),
         ],
     )
-    def test_division_by_zero_raises(self, memory: Memory, divisor: int):
+    def test_division_by_zero_raises_division_by_zero_error(self, memory: Memory, divisor: int):
         """Test that division by zero raises ZeroDivisionError."""
         with pytest.raises(ZeroDivisionError):
             _ = memory / divisor
