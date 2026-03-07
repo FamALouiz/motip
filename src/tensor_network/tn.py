@@ -1,9 +1,7 @@
 """Tensor network data structure."""
 
-from typing import Sequence
-from typing import TypeAlias
 from dataclasses import dataclass
-from typing import override
+from typing import Sequence, TypeAlias, override
 
 from numpy import ndarray
 
@@ -14,17 +12,17 @@ ContractionPath: TypeAlias = Sequence[tuple[int, int]]
 class TensorNetwork:
     """Tensor network data structure."""
 
-    _input_indices: list[list[int]]
-    _output_indices: list[int]
-    _shapes: list[tuple[int, ...]]
-    _size_dict: dict[int, int]
-    _arrays: list[ndarray] | None
+    input_indices: list[list[int]]
+    output_indices: list[int]
+    shapes: list[tuple[int, ...]]
+    size_dict: dict[int, int]
+    arrays: list[ndarray] | None
 
     def __post_init__(self):
         """Validate the tensor network data."""
-        if len(self._input_indices) != len(self._shapes):
+        if len(self.input_indices) != len(self.shapes):
             raise ValueError("The number of input index lists must match the number of shapes.")
-        for input_indices, shape in zip(self._input_indices, self._shapes):
+        for input_indices, shape in zip(self.input_indices, self.shapes):
             if len(input_indices) != len(shape):
                 raise ValueError(
                     f"Each input index list must have the same length as its corresponding shape. "
@@ -39,56 +37,36 @@ class TensorNetwork:
     ]:
         """Tuple representation of the tensor network."""
         return (
-            self._input_indices,
-            self._output_indices,
-            self._shapes,
-            self._size_dict,
-            self._arrays,
+            self.input_indices,
+            self.output_indices,
+            self.shapes,
+            self.size_dict,
+            self.arrays,
         )
 
     @property
     def num_tensors(self) -> int:
         """Number of tensors in the network."""
-        return len(self._input_indices)
+        return len(self.input_indices)
 
     @property
     def arrays(self) -> list[ndarray]:
         """Arrays in the tensor network."""
-        if self._arrays is None:
+        if self.arrays is None:
             raise ValueError(
                 "Arrays were not generated for this tensor network. Only metadata is available."
             )
-        return self._arrays
-
-    @property
-    def input_indices(self) -> list[list[int]]:
-        """Input indices of the tensor network."""
-        return self._input_indices
-
-    @property
-    def output_indices(self) -> list[int]:
-        """Output indices of the tensor network."""
-        return self._output_indices
-
-    @property
-    def shapes(self) -> list[tuple[int, ...]]:
-        """Shapes of the tensors in the network."""
-        return self._shapes
-
-    @property
-    def size_dict(self) -> dict[int, int]:
-        """Size dictionary of the indices in the network."""
-        return self._size_dict
+        return self.arrays
 
     @override
     def __eq__(self, other: object) -> bool:
         """Equality comparison for TensorNetwork."""
         if isinstance(other, TensorNetwork):
             return self.as_tuple[:-1] == other.as_tuple[:-1] and all(
-                (a1 == a2).all() for a1, a2 in zip(self._arrays or [], other._arrays or [])
+                (a1 == a2).all() for a1, a2 in zip(self.arrays or [], other.arrays or [])
             )
         elif isinstance(other, tuple):
             return self.as_tuple[:-1] == other[:-1] and all(
-                (a1 == a2).all() for a1, a2 in zip(self._arrays or [], other[-1] or [])
+                (a1 == a2).all() for a1, a2 in zip(self.arrays or [], other[-1] or [])
             )
         return NotImplemented
