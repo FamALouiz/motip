@@ -9,7 +9,9 @@ class TestRandomTNGeneration:
 
     def test_random_tn_generation(self):
         """Test the generation of a random tensor network."""
-        tn = generate_random_tn(num_tensors=5, max_rank=3, max_dim=4, seed=42, generate_arrays=True)
+        tn = generate_random_tn(
+            num_tensors=5, average_rank=3, max_dim=4, seed=42, generate_arrays=True
+        )
 
         assert isinstance(tn, TensorNetwork)
         assert len(tn.input_indices) == 5
@@ -21,16 +23,16 @@ class TestRandomTNGeneration:
     def test_same_seed_produces_same_tn(self):
         """Test that using the same seed produces the same tensor network."""
         tn1 = generate_random_tn(
-            num_tensors=5, max_rank=3, max_dim=4, seed=42, generate_arrays=False
+            num_tensors=5, average_rank=3, max_dim=4, seed=42, generate_arrays=False
         )
         tn2 = generate_random_tn(
-            num_tensors=5, max_rank=3, max_dim=4, seed=42, generate_arrays=False
+            num_tensors=5, average_rank=3, max_dim=4, seed=42, generate_arrays=False
         )
         tn3 = generate_random_tn(
-            num_tensors=5, max_rank=3, max_dim=4, seed=43, generate_arrays=True
+            num_tensors=5, average_rank=3, max_dim=4, seed=43, generate_arrays=True
         )
         tn4 = generate_random_tn(
-            num_tensors=5, max_rank=3, max_dim=4, seed=43, generate_arrays=True
+            num_tensors=5, average_rank=3, max_dim=4, seed=43, generate_arrays=True
         )
 
         assert tn1 == tn2
