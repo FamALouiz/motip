@@ -284,3 +284,51 @@ class TestMemoryOperations:
 
         with pytest.raises(ZeroDivisionError):
             _ = memory // divisor
+
+    @pytest.mark.parametrize(
+        ("memory1", "memory2", "expected"),
+        [
+            (Memory(2048), Memory(1024), True),
+            (Memory(1024), Memory(2048), False),
+            (Memory(1024), Memory(1024), False),
+        ],
+    )
+    def test_greater_than(self, memory1: Memory, memory2: Memory, expected: bool):
+        """Test greater than comparison of two Memory instances."""
+        assert (memory1 > memory2) == expected
+
+    @pytest.mark.parametrize(
+        ("memory1", "memory2", "expected"),
+        [
+            (Memory(1024), Memory(2048), True),
+            (Memory(2048), Memory(1024), False),
+            (Memory(1024), Memory(1024), False),
+        ],
+    )
+    def test_less_than(self, memory1: Memory, memory2: Memory, expected: bool):
+        """Test less than comparison of two Memory instances."""
+        assert (memory1 < memory2) == expected
+
+    @pytest.mark.parametrize(
+        ("memory1", "memory2", "expected"),
+        [
+            (Memory(2048), Memory(1024), True),
+            (Memory(1024), Memory(1024), True),
+            (Memory(1024), Memory(2048), False),
+        ],
+    )
+    def test_greater_than_or_equal(self, memory1: Memory, memory2: Memory, expected: bool):
+        """Test greater than or equal comparison of two Memory instances."""
+        assert (memory1 >= memory2) == expected
+
+    @pytest.mark.parametrize(
+        ("memory1", "memory2", "expected"),
+        [
+            (Memory(1024), Memory(2048), True),
+            (Memory(1024), Memory(1024), True),
+            (Memory(2048), Memory(1024), False),
+        ],
+    )
+    def test_less_than_or_equal(self, memory1: Memory, memory2: Memory, expected: bool):
+        """Test less than or equal comparison of two Memory instances."""
+        assert (memory1 <= memory2) == expected
