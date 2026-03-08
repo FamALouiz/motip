@@ -10,7 +10,6 @@ dependencies = [
     "networkx>=3.6.1",
     "numpy>=2.4.2",
     "optuna>=4.7.0",
-    "pytest>=9.0.2",
     "scipy>=1.17.1",
 ]
 license = "MIT"
@@ -37,5 +36,6 @@ project-includes = [
 dev = [
     "pyrefly>=0.54.0",
     "pytest-cov>=7.0.0",
+    "pytest>=9.0.2",
     "ruff>=0.15.4",
 ]
