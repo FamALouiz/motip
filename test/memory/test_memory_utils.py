@@ -2,7 +2,21 @@
 
 import pytest
 
-from memory.utils import get_memory_from_string
+from memory.calculator import MemoryCalculator
+from memory.utils import get_largest_tensor_in_network, get_memory_from_string
+from tensor_network import TensorNetwork
+
+
+@pytest.fixture
+def sample_network() -> TensorNetwork:
+    """Create a deterministic tensor network with known contraction outcomes."""
+    return TensorNetwork(
+        input_indices=[[0, 1], [2, 3], [1, 2]],
+        output_indices=[0, 3],
+        shapes=[(2, 3), (5, 7), (3, 5)],
+        size_dict={0: 2, 1: 3, 2: 5, 3: 7},
+        tensor_arrays=None,
+    )
 
 
 class TestMemoryFromString:
@@ -43,3 +57,34 @@ class TestMemoryFromString:
         """Test invalid memory strings raise ValueError."""
         with pytest.raises(ValueError):
             get_memory_from_string(memory_str)
+
+
+class TestLargestTensorInNetwork:
+    """Tests for get_largest_tensor_in_network behavior."""
+
+    def test_largest_tensor_in_network(self, sample_network: TensorNetwork):
+        """Test that the largest tensor in the network is correctly identified."""
+        expected_largest_tensor_idx = 1
+        expected_largest_memory = MemoryCalculator().calculate_memory_for_tensor(
+            sample_network.tensors[expected_largest_tensor_idx]
+        )
+
+        largest_tensor_idx, largest_memory = get_largest_tensor_in_network(sample_network)
+
+        assert largest_tensor_idx == expected_largest_tensor_idx
+        assert largest_memory == expected_largest_memory
+
+    def test_empty_network_raises_assertion_error(self):
+        """Test that an empty tensor network raises an AssertionError."""
+        empty_network = TensorNetwork(
+            input_indices=[],
+            output_indices=[],
+            shapes=[],
+            size_dict={},
+            tensor_arrays=None,
+        )
+
+        with pytest.raises(
+            AssertionError, match="Tensor network must contain at least one tensor."
+        ):
+            get_largest_tensor_in_network(empty_network)
