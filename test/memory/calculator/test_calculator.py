@@ -71,13 +71,13 @@ class TestMemoryCalculatorElementSize:
         with pytest.raises(ValueError, match="Memory value cannot be negative"):
             calculator.set_element_size(-1)
 
-    def test_element_size_is_shared_across_instances(self):
+    def test_element_size_is_not_shared_across_instances(self):
         """Test class-level element size is reflected by all instances."""
         calculator1 = MemoryCalculator().set_element_size(2)
         calculator2 = MemoryCalculator()
 
         assert calculator1.element_size_in_bytes == Memory(2)
-        assert calculator2.element_size_in_bytes == Memory(2)
+        assert calculator2.element_size_in_bytes == Memory(8)
 
 
 class TestMemoryCalculatorTensorMemory:
