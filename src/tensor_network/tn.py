@@ -5,29 +5,81 @@ from typing import Sequence, TypeAlias, override
 
 from numpy import ndarray
 
+from tensor import Tensor
+
 ContractionPath: TypeAlias = Sequence[tuple[int, int]]
 
 
-@dataclass
+@dataclass(init=False)
 class TensorNetwork:
     """Tensor network data structure."""
 
-    input_indices: list[list[int]]
+    tensors: list[Tensor]
     output_indices: list[int]
-    shapes: list[tuple[int, ...]]
     size_dict: dict[int, int]
-    tensor_arrays: list[ndarray] | None
+
+    def __init__(
+        self,
+        *,
+        output_indices: list[int],
+        size_dict: dict[int, int],
+        tensors: list[Tensor] | None = None,
+        input_indices: list[list[int]] | None = None,
+        shapes: list[tuple[int, ...]] | None = None,
+        tensor_arrays: list[ndarray] | None = None,
+    ):
+        """Initialize the tensor network from tensors or raw tensor components."""
+        self.output_indices = output_indices
+        self.size_dict = size_dict
+
+        if tensors is not None:
+            self.tensors = tensors
+            self.__post_init__()
+            return
+
+        if input_indices is None or shapes is None:
+            raise ValueError("Either tensors or both input_indices and shapes must be provided.")
+
+        if len(input_indices) != len(shapes):
+            raise ValueError("The number of input index lists must match the number of shapes.")
+
+        if tensor_arrays is not None and len(tensor_arrays) != len(input_indices):
+            raise ValueError(
+                "The number of tensor arrays must match the number of input index lists."
+            )
+
+        arrays = tensor_arrays if tensor_arrays is not None else [None] * len(input_indices)
+        self.tensors = [
+            Tensor(tensor_input_indices, shape, array)
+            for tensor_input_indices, shape, array in zip(input_indices, shapes, arrays)
+        ]
+        self.__post_init__()
 
     def __post_init__(self):
         """Validate the tensor network data."""
-        if len(self.input_indices) != len(self.shapes):
-            raise ValueError("The number of input index lists must match the number of shapes.")
-        for input_indices, shape in zip(self.input_indices, self.shapes):
-            if len(input_indices) != len(shape):
+        for tensor in self.tensors:
+            if len(tensor.input_indices) != len(tensor.shape):
                 raise ValueError(
                     f"Each input index list must have the same length as its corresponding shape. "
-                    f"Got {len(input_indices)} indices and shape {shape}."
+                    f"Got {len(tensor.input_indices)} indices and shape {tensor.shape}."
                 )
+
+    @property
+    def input_indices(self) -> list[list[int]]:
+        """Input indices for each tensor in the network."""
+        return [tensor.input_indices for tensor in self.tensors]
+
+    @property
+    def shapes(self) -> list[tuple[int, ...]]:
+        """Shapes for each tensor in the network."""
+        return [tensor.shape for tensor in self.tensors]
+
+    @property
+    def tensor_arrays(self) -> list[ndarray] | None:
+        """Arrays for each tensor in the network."""
+        if any(tensor.array is None for tensor in self.tensors):
+            return None
+        return [tensor.array for tensor in self.tensors if tensor.array is not None]
 
     @property
     def as_tuple(
@@ -47,7 +99,7 @@ class TensorNetwork:
     @property
     def num_tensors(self) -> int:
         """Number of tensors in the network."""
-        return len(self.input_indices)
+        return len(self.tensors)
 
     @property
     def arrays(self) -> list[ndarray]:

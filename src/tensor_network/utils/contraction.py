@@ -2,6 +2,7 @@
 
 from copy import deepcopy
 
+from tensor import Tensor
 from tensor_network import TensorNetwork
 
 
@@ -21,18 +22,19 @@ def contract_pair(network: TensorNetwork, pair: tuple[int, int]) -> TensorNetwor
 
     new_tensor_network = deepcopy(network)
 
-    contracted_indices = set(network.input_indices[pair[0]]) & set(network.input_indices[pair[1]])
+    contracted_indices = set(network.tensors[pair[0]].input_indices) & set(
+        network.tensors[pair[1]].input_indices
+    )
     new_tensor_indices = (
-        set(network.input_indices[pair[0]]) | set(network.input_indices[pair[1]])
+        set(network.tensors[pair[0]].input_indices) | set(network.tensors[pair[1]].input_indices)
     ) - contracted_indices
     new_tensor_shape = tuple(network.size_dict[index] for index in new_tensor_indices)
 
-    new_tensor_network.input_indices.insert(pair[0], list(new_tensor_indices))
-    new_tensor_network.shapes.insert(pair[0], new_tensor_shape)
+    for idx in sorted(pair, reverse=True):
+        new_tensor_network.tensors.pop(idx)
 
-    new_tensor_network.input_indices.remove(network.input_indices[pair[0]])
-    new_tensor_network.input_indices.remove(network.input_indices[pair[1]])
-    new_tensor_network.shapes.remove(network.shapes[pair[0]])
-    new_tensor_network.shapes.remove(network.shapes[pair[1]])
+    new_tensor_network.tensors.insert(
+        pair[0], Tensor(list(new_tensor_indices), new_tensor_shape, None)
+    )
 
     return new_tensor_network

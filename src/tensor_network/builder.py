@@ -3,6 +3,7 @@
 import cotengra as ctg
 from numpy import inf, random
 
+from tensor import Tensor
 from tensor_network import TensorNetwork
 
 
@@ -170,12 +171,16 @@ class TensorNetworkBuilder:
             random.seed(self.__seed if self.__seed != self.UNSET else 0)
             self.__arrays = [random.rand(*shape) for shape in shapes]
 
+        arrays = self.__arrays if self.__generate_arrays else [None] * len(input_indices)
+        tensors = [
+            Tensor(tensor_input_indices, shape, array)
+            for tensor_input_indices, shape, array in zip(input_indices, shapes, arrays)
+        ]
+
         resulting_tn = TensorNetwork(
-            input_indices=input_indices,
             output_indices=output_indices,
+            tensors=tensors,
             size_dict=size_dict,
-            shapes=shapes,
-            tensor_arrays=self.__arrays if self.__generate_arrays else None,
         )
 
         return resulting_tn

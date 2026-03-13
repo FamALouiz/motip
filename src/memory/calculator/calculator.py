@@ -61,6 +61,8 @@ class MemoryCalculator:
         self, network: TensorNetwork, contraction_pair: tuple[int, int]
     ) -> Memory:
         """Calculate the memory requirements for a single contraction pair."""
+        if contraction_pair[0] == contraction_pair[1]:
+            raise ValueError("Contraction pair cannot consist of the same tensor index.")
         contracted_indices = set(network.input_indices[contraction_pair[0]]) & set(
             network.input_indices[contraction_pair[1]]
         )
