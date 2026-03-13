@@ -6,6 +6,7 @@ import pytest
 
 from memory import Memory
 from memory.calculator import MemoryCalculator
+from tensor import Tensor
 from tensor_network import TensorNetwork
 
 
@@ -77,6 +78,20 @@ class TestMemoryCalculatorElementSize:
 
         assert calculator1.element_size_in_bytes == Memory(2)
         assert calculator2.element_size_in_bytes == Memory(2)
+
+
+class TestMemoryCalculatorTensorMemory:
+    """Tests for memory calculation of individual tensors."""
+
+    def test_calculate_memory_for_tensor(self):
+        """Test memory calculation for a single tensor."""
+        calculator = MemoryCalculator().set_element_size(4)
+        tensor = Tensor(input_indices=[0, 1], shape=(3, 4), array=None)
+
+        memory = calculator.calculate_memory_for_tensor(tensor)
+
+        expected_memory = Memory(4 * 3 * 4)  # element size * num elements
+        assert memory == expected_memory
 
 
 class TestMemoryCalculatorPeakMemory:
