@@ -16,14 +16,16 @@ class MemoryCalculator:
     contractions.
     """
 
-    __element_size_in_bytes: Memory = Memory(
-        8
-    )  # Default to 8 bytes (i.e. 64 bits) for double-precision floating-point numbers.
+    def __init__(self):
+        """Initialize the memory calculator."""
+        self.__element_size_in_bytes: Memory = Memory(
+            8
+        )  # Default to 8 bytes (i.e. 64 bits) for double-precision floating-point numbers.
 
     @property
     def element_size_in_bytes(self) -> Memory:
         """Get the size of each element in the tensors in bytes."""
-        return MemoryCalculator.__element_size_in_bytes
+        return self.__element_size_in_bytes
 
     def set_element_size(self, element_size: int | Memory) -> "MemoryCalculator":
         """Set the size of each element in the tensors.
@@ -39,7 +41,7 @@ class MemoryCalculator:
             element_size_in_bytes = Memory(element_size)
         else:
             element_size_in_bytes = element_size
-        MemoryCalculator.__element_size_in_bytes = element_size_in_bytes
+        self.__element_size_in_bytes = element_size_in_bytes
         return self
 
     def __calculate_intial_memory_requirements(self, network: TensorNetwork) -> Memory:
@@ -58,7 +60,7 @@ class MemoryCalculator:
         total_elements = sum(
             self.calculate_memory_for_tensor(tensor).bytes for tensor in network.tensors
         )
-        return MemoryCalculator.__element_size_in_bytes * total_elements
+        return self.__element_size_in_bytes * total_elements
 
     def __calculate_memory_for_contraction_pair(
         self, network: TensorNetwork, contraction_pair: tuple[int, int]
@@ -78,7 +80,7 @@ class MemoryCalculator:
         new_tensor_shape = tuple(network.size_dict[index] for index in new_tensor_indices)
         new_tensor_elements = math.prod(new_tensor_shape)
 
-        return MemoryCalculator.__element_size_in_bytes * new_tensor_elements
+        return self.__element_size_in_bytes * new_tensor_elements
 
     def __calculate_memory_for_unused_tensors(
         self, network: TensorNetwork, contraction_pair: tuple[int, int]
@@ -89,7 +91,7 @@ class MemoryCalculator:
             for tensor_idx in contraction_pair
         )
 
-        return MemoryCalculator.__element_size_in_bytes * total_elements_to_remove
+        return self.__element_size_in_bytes * total_elements_to_remove
 
     def calculate_peak_memory(self, tn: TensorNetwork, contraction_path: ContractionPath) -> Memory:
         """Calculate the peak memory requirements of a tensor network contraction.
@@ -187,4 +189,4 @@ class MemoryCalculator:
     def calculate_memory_for_tensor(self, tensor: Tensor) -> Memory:
         """Calculate the memory requirements for a single tensor."""
         num_elements = math.prod(tensor.shape)
-        return MemoryCalculator.__element_size_in_bytes * num_elements
+        return self.__element_size_in_bytes * num_elements
