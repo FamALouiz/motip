@@ -169,16 +169,17 @@ class TestMemoryCalculatorErrorHandling:
         with pytest.raises(KeyError):
             method(malformed_network, [(1, 2)])
 
-    @pytest.mark.parametrize("method_name", ["calculate_peak_memory", "calculate_total_memory"])
-    def test_repeated_tensor_index_in_pair_raises_value_error(
-        self, sample_network, method_name: str
-    ):
-        """Test invalid contraction pair with same tensor index."""
+    def test_repeated_tensor_index_in_pair_raises_value_error_peak_memory(self, sample_network):
+        """Test invalid contraction pair with same tensor index for peak memory."""
         calculator = MemoryCalculator()
-        method = getattr(calculator, method_name)
-
         with pytest.raises(ValueError):
-            method(sample_network, [(0, 0)])
+            calculator.calculate_peak_memory(sample_network, [(0, 0)])
+
+    def test_repeated_tensor_index_in_pair_raises_value_error_total_memory(self, sample_network):
+        """Test invalid contraction pair with same tensor index for total memory."""
+        calculator = MemoryCalculator()
+        with pytest.raises(ValueError):
+            calculator.calculate_total_memory(sample_network, [(0, 0)])
 
     def test_peak_memory_with_disk_writeback_not_implemented(self, sample_network, sample_path):
         """Test unsupported peak-memory writeback mode."""
