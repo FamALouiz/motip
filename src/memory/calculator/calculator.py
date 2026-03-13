@@ -4,6 +4,7 @@ import math
 from copy import deepcopy
 
 from memory.memory import Memory
+from tensor import Tensor
 from tensor_network import ContractionPath, TensorNetwork
 from tensor_network.utils.contraction import contract_pair
 
@@ -54,7 +55,9 @@ class MemoryCalculator:
         Returns:
             The initial memory requirements.
         """
-        total_elements = sum(math.prod(tensor_shape) for tensor_shape in network.shapes)
+        total_elements = sum(
+            self.calculate_memory_for_tensor(tensor).bytes for tensor in network.tensors
+        )
         return MemoryCalculator.__element_size_in_bytes * total_elements
 
     def __calculate_memory_for_contraction_pair(
@@ -82,7 +85,8 @@ class MemoryCalculator:
     ) -> Memory:
         """Calculate the memory for tensors that are no longer used after a contraction."""
         total_elements_to_remove = sum(
-            math.prod(network.shapes[tensor_idx]) for tensor_idx in contraction_pair
+            self.calculate_memory_for_tensor(network.tensors[tensor_idx]).bytes
+            for tensor_idx in contraction_pair
         )
 
         return MemoryCalculator.__element_size_in_bytes * total_elements_to_remove
@@ -179,3 +183,8 @@ class MemoryCalculator:
             The total memory requirements.
         """
         raise NotImplementedError("Memory calculation is not yet implemented.")
+
+    def calculate_memory_for_tensor(self, tensor: Tensor) -> Memory:
+        """Calculate the memory requirements for a single tensor."""
+        num_elements = math.prod(tensor.shape)
+        return MemoryCalculator.__element_size_in_bytes * num_elements
