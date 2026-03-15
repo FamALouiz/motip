@@ -3,8 +3,13 @@
 import pytest
 
 from memory.calculator import MemoryCalculator
-from memory.utils import get_largest_tensor_in_network, get_memory_from_string
+from memory.utils import (
+    get_largest_intermediate_tensor_in_contraction_path,
+    get_largest_tensor_in_network,
+    get_memory_from_string,
+)
 from tensor_network import TensorNetwork
+from tensor_network.utils.contraction import contract_pair
 
 
 @pytest.fixture
@@ -88,3 +93,71 @@ class TestLargestTensorInNetwork:
             AssertionError, match="Tensor network must contain at least one tensor."
         ):
             get_largest_tensor_in_network(empty_network)
+
+
+class TestLargestIntermediateTensorInContractionPath:
+    """Tests for get_largest_intermediate_tensor_in_contraction_path behavior."""
+
+    def test_returns_minus_one_when_largest_tensor_is_initial(self) -> None:
+        """Test largest tensor being one of the original tensors."""
+        network = TensorNetwork(
+            input_indices=[[0, 1], [1, 2], [2, 3]],
+            output_indices=[0, 3],
+            shapes=[(10, 10), (10, 2), (2, 2)],
+            size_dict={0: 10, 1: 10, 2: 2, 3: 2},
+            tensor_arrays=None,
+        )
+        path = [(1, 2), (0, 1)]
+
+        largest_idx, largest_memory = get_largest_intermediate_tensor_in_contraction_path(
+            network, path
+        )
+
+        expected_memory = MemoryCalculator().calculate_memory_for_tensor(network.tensors[0])
+        assert largest_idx == -1
+        assert largest_memory == expected_memory
+
+    def test_returns_intermediate_step_when_largest_tensor_is_intermediate(self) -> None:
+        """Test largest tensor being created at a non-final contraction step."""
+        network = TensorNetwork(
+            input_indices=[[0, 1], [2, 3], [1, 2]],
+            output_indices=[0, 3],
+            shapes=[(10, 10), (8, 8), (10, 8)],
+            size_dict={0: 10, 1: 10, 2: 8, 3: 8},
+            tensor_arrays=None,
+        )
+        path = [(0, 1), (0, 1)]
+
+        largest_idx, largest_memory = get_largest_intermediate_tensor_in_contraction_path(
+            network, path
+        )
+
+        after_first_contraction = contract_pair(network, path[0])
+        expected_memory = MemoryCalculator().calculate_memory_for_tensor(
+            after_first_contraction.tensors[0]
+        )
+        assert largest_idx == 0
+        assert largest_memory == expected_memory
+
+    def test_returns_last_step_when_largest_tensor_is_final_tensor(self) -> None:
+        """Test largest tensor being the final tensor after all contractions."""
+        network = TensorNetwork(
+            input_indices=[[0, 1], [1, 2], [3, 4]],
+            output_indices=[0, 2, 3, 4],
+            shapes=[(10, 2), (2, 10), (9, 9)],
+            size_dict={0: 10, 1: 2, 2: 10, 3: 9, 4: 9},
+            tensor_arrays=None,
+        )
+        path = [(0, 1), (0, 1)]
+
+        largest_idx, largest_memory = get_largest_intermediate_tensor_in_contraction_path(
+            network, path
+        )
+
+        after_first_contraction = contract_pair(network, path[0])
+        after_second_contraction = contract_pair(after_first_contraction, path[1])
+        expected_memory = MemoryCalculator().calculate_memory_for_tensor(
+            after_second_contraction.tensors[0]
+        )
+        assert largest_idx == 1
+        assert largest_memory == expected_memory
