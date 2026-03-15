@@ -16,7 +16,7 @@ class MemoryCalculator:
     contractions.
     """
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the memory calculator."""
         self.__element_size_in_bytes: Memory = Memory(
             8

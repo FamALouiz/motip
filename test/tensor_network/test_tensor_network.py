@@ -10,7 +10,7 @@ from tensor_network import TensorNetwork
 class TestTensorNetwork:
     """Test the TensorNetwork class with various parameter configurations."""
 
-    def test_tensor_network_as_tuple(self):
+    def test_tensor_network_as_tuple(self) -> None:
         """Test that the as_tuple method returns the correct shape."""
         network = TensorNetwork(
             input_indices=[[0, 1], [1, 2]],
@@ -48,7 +48,7 @@ class TestTensorNetwork:
             ),
         ],
     )
-    def test_tensor_network_equality_succeeds(self, other):
+    def test_tensor_network_equality_succeeds(self, other: object) -> None:
         """Test the equality comparison of TensorNetwork."""
         network = TensorNetwork(
             input_indices=[[0, 1], [1, 2]],
@@ -80,7 +80,7 @@ class TestTensorNetwork:
             "not a tensor network",
         ],
     )
-    def test_tensor_network_equality_fails(self, other):
+    def test_tensor_network_equality_fails(self, other: object) -> None:
         """Test that the equality comparison fails for inequivalent and non-TN objects."""
         network = TensorNetwork(
             input_indices=[[0, 1], [1, 2]],
@@ -92,7 +92,7 @@ class TestTensorNetwork:
 
         assert network != other
 
-    def test_tensor_network_arrays_property(self):
+    def test_tensor_network_arrays_property(self) -> None:
         """Test that the arrays property raises an error when arrays are not generated."""
         network = TensorNetwork(
             input_indices=[[0, 1], [1, 2]],
@@ -108,7 +108,7 @@ class TestTensorNetwork:
         ):
             _ = network.arrays
 
-    def test_tensor_network_properties(self):
+    def test_tensor_network_properties(self) -> None:
         """Test the properties of the TensorNetwork class."""
         random_tensor_1 = np.random.rand(3, 4)
         random_tensor_2 = np.random.rand(4, 5)
@@ -127,7 +127,7 @@ class TestTensorNetwork:
         assert network.size_dict == {0: 3, 1: 4, 2: 5}
         assert network.arrays == [random_tensor_1, random_tensor_2]
 
-    def test_mismatching_information_should_raise_error(self):
+    def test_mismatching_information_should_raise_error(self) -> None:
         """Test that mismatching information raises an error."""
         with pytest.raises(ValueError):
             TensorNetwork(
@@ -138,7 +138,7 @@ class TestTensorNetwork:
                 tensor_arrays=[np.random.rand(3, 4), np.random.rand(4, 5)],
             )
 
-    def test_initialization_from_tensors(self):
+    def test_initialization_from_tensors(self) -> None:
         """Test that TensorNetwork can be initialized directly from tensor objects."""
         tensors = [
             Tensor([0, 1], (3, 4), np.ones((3, 4))),
@@ -155,7 +155,7 @@ class TestTensorNetwork:
         assert network.input_indices == [[0, 1], [1, 2]]
         assert network.shapes == [(3, 4), (4, 5)]
 
-    def test_initialization_without_required_tensor_data_should_raise_error(self):
+    def test_initialization_without_required_tensor_data_should_raise_error(self) -> None:
         """Test that initialization fails without tensors and without raw tensor components."""
         with pytest.raises(
             ValueError,

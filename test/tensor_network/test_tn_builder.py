@@ -1,5 +1,7 @@
 """Test the TensorNetworkBuilder class."""
 
+from collections.abc import Callable
+
 import numpy as np
 import pytest
 
@@ -32,14 +34,14 @@ def assert_required_network_from_builder(network: TensorNetwork) -> None:
 class TestWithNumberOfTensors:
     """Test the with_number_of_tensors method of TensorNetworkBuilder."""
 
-    def test_default_unset_value_fails_validation(self):
+    def test_default_unset_value_fails_validation(self) -> None:
         """Test that the default unset value for number of tensors fails validation."""
         builder = TensorNetworkBuilder().with_average_number_of_indices_per_tensor(2)
 
         with pytest.raises(ValueError, match="Number of tensors must be set."):
             builder.build()
 
-    def test_set_value_succeeds(self):
+    def test_set_value_succeeds(self) -> None:
         """Test that setting the number of tensors succeeds."""
         network = (
             TensorNetworkBuilder()
@@ -52,7 +54,7 @@ class TestWithNumberOfTensors:
         assert len(network.input_indices) == 7
 
     @pytest.mark.parametrize("value", [0, -1])
-    def test_validation(self, value: int):
+    def test_validation(self, value: int) -> None:
         """Test that invalid values for number of tensors fail validation."""
         builder = (
             TensorNetworkBuilder()
@@ -67,14 +69,14 @@ class TestWithNumberOfTensors:
 class TestWithAverageNumberOfIndicesPerTensor:
     """Test the with_average_number_of_indices_per_tensor method of TensorNetworkBuilder."""
 
-    def test_default_unset_value_fails_validation(self):
+    def test_default_unset_value_fails_validation(self) -> None:
         """Test that the default unset value for average no of idxs per tensor fails validation."""
         builder = TensorNetworkBuilder().with_number_of_tensors(2)
 
         with pytest.raises(ValueError, match="Average number of indices per tensor must be set."):
             builder.build()
 
-    def test_set_value_succeeds(self):
+    def test_set_value_succeeds(self) -> None:
         """Test that setting the average number of indices per tensor succeeds."""
         network = (
             TensorNetworkBuilder()
@@ -95,7 +97,7 @@ class TestWithAverageNumberOfIndicesPerTensor:
         )  # withing 1 std dev of expected total since it is not guaranteed
 
     @pytest.mark.parametrize("value", [0, -1])
-    def test_validation(self, value: int):
+    def test_validation(self, value: int) -> None:
         """Test that invalid values for average number of indices per tensor fail validation."""
         builder = (
             TensorNetworkBuilder()
@@ -112,13 +114,13 @@ class TestWithAverageNumberOfIndicesPerTensor:
 class TestWithNumberOfOutputIndices:
     """Test the with_number_of_output_indices method of TensorNetworkBuilder."""
 
-    def test_default_unset_value_succeeds(self):
+    def test_default_unset_value_succeeds(self) -> None:
         """Test that the default unset value for number of output indices succeeds."""
         network = make_required_builder().build()
 
         assert_required_network_from_builder(network)
 
-    def test_set_value_succeeds(self):
+    def test_set_value_succeeds(self) -> None:
         """Test that setting the number of output indices succeeds."""
         network = make_required_builder().with_number_of_output_indices(2).build()
 
@@ -126,7 +128,7 @@ class TestWithNumberOfOutputIndices:
         assert network.output_indices is not None
         assert len(network.output_indices) == 2
 
-    def test_validation(self):
+    def test_validation(self) -> None:
         """Test that invalid values for number of output indices fail validation."""
         builder = (
             make_required_builder()
@@ -137,7 +139,7 @@ class TestWithNumberOfOutputIndices:
         with pytest.raises(ValueError):
             builder.build()
 
-    def test_valid_output_indices_with_outer_hyper_indices(self):
+    def test_valid_output_indices_with_outer_hyper_indices(self) -> None:
         """Test that valid values for number of output indices with outer hyper indices succeed."""
         network = (
             make_required_builder()
@@ -154,13 +156,13 @@ class TestWithNumberOfOutputIndices:
 class TestWithNumberOfInnerHyperIndices:
     """Test the with_number_of_inner_hyper_indices method of TensorNetworkBuilder."""
 
-    def test_default_unset_value_succeeds(self):
+    def test_default_unset_value_succeeds(self) -> None:
         """Test that the default unset value for number of inner hyper indices succeeds."""
         network = make_required_builder().build()
 
         assert_required_network_from_builder(network)
 
-    def test_set_value_succeeds(self):
+    def test_set_value_succeeds(self) -> None:
         """Test that setting the number of inner hyper indices succeeds."""
         network = make_required_builder().with_number_of_inner_hyper_indices(6).build()
 
@@ -171,7 +173,7 @@ class TestWithNumberOfInnerHyperIndices:
         assert total_inner_hyper_indices == 6
 
     @pytest.mark.parametrize("value", [-1])
-    def test_validation(self, value: int):
+    def test_validation(self, value: int) -> None:
         """Test that invalid values for number of inner hyper indices fail validation."""
         builder = make_required_builder().with_number_of_inner_hyper_indices(value)
 
@@ -182,13 +184,13 @@ class TestWithNumberOfInnerHyperIndices:
 class TestWithNumberOfOuterHyperIndices:
     """Test the with_number_of_outer_hyper_indices method of TensorNetworkBuilder."""
 
-    def test_default_unset_value_succeeds(self):
+    def test_default_unset_value_succeeds(self) -> None:
         """Test that the default unset value for number of outer hyper indices succeeds."""
         network = make_required_builder().build()
 
         assert_required_network_from_builder(network)
 
-    def test_set_value_succeeds(self):
+    def test_set_value_succeeds(self) -> None:
         """Test that setting the number of outer hyper indices succeeds."""
         network = make_required_builder().with_number_of_outer_hyper_indices(3).build()
 
@@ -196,7 +198,7 @@ class TestWithNumberOfOuterHyperIndices:
         assert len(network.output_indices) == 3
 
     @pytest.mark.parametrize("value", [-1])
-    def test_validation(self, value: int):
+    def test_validation(self, value: int) -> None:
         """Test that invalid values for number of outer hyper indices fail validation."""
         builder = make_required_builder().with_number_of_outer_hyper_indices(value)
 
@@ -207,20 +209,20 @@ class TestWithNumberOfOuterHyperIndices:
 class TestWithMinDimensionSize:
     """Test the with_min_dimension_size method of TensorNetworkBuilder."""
 
-    def test_default_unset_value_succeeds(self):
+    def test_default_unset_value_succeeds(self) -> None:
         """Test that the default unset value for minimum dimension size succeeds."""
         network = make_required_builder().build()
 
         assert_required_network_from_builder(network)
 
-    def test_set_value_succeeds(self):
+    def test_set_value_succeeds(self) -> None:
         """Test that setting the minimum dimension size succeeds."""
         network = make_required_builder().with_min_dimension_size(3).build()
 
         assert all(len(tensor) >= 3 for tensor in network.input_indices)
 
     @pytest.mark.parametrize("value", [0, -1])
-    def test_validation(self, value: int):
+    def test_validation(self, value: int) -> None:
         """Test that invalid values for minimum dimension size fail validation."""
         builder = make_required_builder().with_min_dimension_size(value)
 
@@ -231,20 +233,20 @@ class TestWithMinDimensionSize:
 class TestWithMaxDimensionSize:
     """Test the with_max_dimension_size method of TensorNetworkBuilder."""
 
-    def test_default_unset_value_succeeds(self):
+    def test_default_unset_value_succeeds(self) -> None:
         """Test that the default unset value for maximum dimension size succeeds."""
         network = make_required_builder().build()
 
         assert_required_network_from_builder(network)
 
-    def test_set_value_succeeds(self):
+    def test_set_value_succeeds(self) -> None:
         """Test that setting the maximum dimension size succeeds."""
         network = make_required_builder().with_max_dimension_size(9).build()
 
         assert all(len(tensor) <= 9 for tensor in network.input_indices)
 
     @pytest.mark.parametrize("value", [0, -1])
-    def test_validation(self, value: int):
+    def test_validation(self, value: int) -> None:
         """Test that invalid values for maximum dimension size fail validation."""
         builder = make_required_builder().with_max_dimension_size(value)
 
@@ -255,27 +257,27 @@ class TestWithMaxDimensionSize:
 class TestWithSeed:
     """Test the with_seed method of TensorNetworkBuilder."""
 
-    def test_default_unset_value_succeeds(self):
+    def test_default_unset_value_succeeds(self) -> None:
         """Test that the default unset value for seed succeeds."""
         network = make_required_builder().build()
 
         assert_required_network_from_builder(network)
 
-    def test_set_value_succeeds(self):
+    def test_set_value_succeeds(self) -> None:
         """Test that setting the seed succeeds."""
         network = make_required_builder().with_seed(123).build()
 
         assert_required_network_from_builder(network)
 
     @pytest.mark.parametrize("value", [-1])
-    def test_validation(self, value: int):
+    def test_validation(self, value: int) -> None:
         """Test that invalid values for seed fail validation."""
         builder = make_required_builder().with_seed(value)
 
         with pytest.raises(ValueError):
             builder.build()
 
-    def test_same_seed_produces_same_network(self):
+    def test_same_seed_produces_same_network(self) -> None:
         """Test that using the same seed produces the same network."""
         builder = make_required_builder().with_seed(123)
         network1 = builder.build()
@@ -287,7 +289,7 @@ class TestWithSeed:
 class TestWithGenerateArrays:
     """Test the with_generate_arrays method of TensorNetworkBuilder."""
 
-    def test_default_unset_value_succeeds(self):
+    def test_default_unset_value_succeeds(self) -> None:
         """Test that the default unset value for generate arrays succeeds."""
         network = make_required_builder().build()
 
@@ -296,14 +298,14 @@ class TestWithGenerateArrays:
         with pytest.raises(ValueError, match="Arrays were not generated for this tensor network."):
             _ = network.arrays
 
-    def test_set_value_succeeds(self):
+    def test_set_value_succeeds(self) -> None:
         """Test that setting the generate arrays flag succeeds."""
         network = make_required_builder().with_generate_arrays().build()
 
         assert_required_network_from_builder(network)
         assert network.arrays is not None
 
-    def test_arrays_are_consistent_with_shapes_and_size_dict(self):
+    def test_arrays_are_consistent_with_shapes_and_size_dict(self) -> None:
         """Test that the generated arrays are consistent with the shapes and size dict."""
         network = make_required_builder().with_generate_arrays().build()
 
@@ -317,7 +319,7 @@ class TestWithGenerateArrays:
             assert shape == expected_shape
             assert array.shape == expected_shape
 
-    def test_same_seed_produces_same_arrays(self):
+    def test_same_seed_produces_same_arrays(self) -> None:
         """Test that using the same seed produces the same arrays."""
         builder = make_required_builder().with_generate_arrays().with_seed(123)
         network1 = builder.build()
@@ -331,7 +333,7 @@ class TestWithGenerateArrays:
 class TestOverallEdgeCases:
     """Test overall edge cases for TensorNetworkBuilder."""
 
-    def test_build_succeeds_with_min_greater_than_max(self):
+    def test_build_succeeds_with_min_greater_than_max(self) -> None:
         """Test that building fails with dimension constraints that are contradictory."""
         builder = (
             TensorNetworkBuilder()
@@ -361,7 +363,9 @@ class TestOverallEdgeCases:
             ),
         ],
     )
-    def test_build_fails_for_composed_invalid_values(self, configure):
+    def test_build_fails_for_composed_invalid_values(
+        self, configure: Callable[[TensorNetworkBuilder], TensorNetworkBuilder]
+    ) -> None:
         """Test that building fails when multiple invalid values are set together."""
         builder = TensorNetworkBuilder()
         configure(builder)
@@ -369,7 +373,7 @@ class TestOverallEdgeCases:
         with pytest.raises(ValueError):
             builder.build()
 
-    def test_builder_succeeds(self):
+    def test_builder_succeeds(self) -> None:
         """Test that the builder succeeds with valid parameters."""
         network = (
             TensorNetworkBuilder()

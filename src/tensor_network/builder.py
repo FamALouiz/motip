@@ -1,7 +1,7 @@
 """Tensor network builder."""
 
 import cotengra as ctg
-from numpy import inf, random
+from numpy import inf, ndarray, random
 
 from tensor import Tensor
 from tensor_network import TensorNetwork
@@ -12,7 +12,7 @@ class TensorNetworkBuilder:
 
     UNSET = -inf
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize builder with unset values."""
         self.__number_of_tensors = self.UNSET
         self.__number_of_output_indices = self.UNSET
@@ -171,7 +171,11 @@ class TensorNetworkBuilder:
             random.seed(self.__seed if self.__seed != self.UNSET else 0)
             self.__arrays = [random.rand(*shape) for shape in shapes]
 
-        arrays = self.__arrays if self.__generate_arrays else [None] * len(input_indices)
+        arrays: list[ndarray | None] = []
+        if self.__generate_arrays:
+            arrays.extend(self.__arrays)
+        else:
+            arrays.extend([None] * len(input_indices))
         tensors = [
             Tensor(tensor_input_indices, shape, array)
             for tensor_input_indices, shape, array in zip(input_indices, shapes, arrays)

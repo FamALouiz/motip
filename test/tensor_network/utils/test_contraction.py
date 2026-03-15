@@ -9,7 +9,7 @@ from tensor_network.utils.contraction import contract_pair
 class TestTensorNetworkContraction:
     """Test the tensor network contraction utilities."""
 
-    def test_contract_pair(self):
+    def test_contract_pair(self) -> None:
         """Test the contract_pair function."""
         tn = TensorNetwork(
             input_indices=[[0, 1], [1, 2], [2, 3]],
@@ -23,7 +23,7 @@ class TestTensorNetworkContraction:
         assert contracted_tn.size_dict == {0: 2, 1: 3, 2: 4, 3: 5}
         assert contracted_tn.shapes == [(2, 4), (4, 5)]
 
-    def test_contract_pair_no_shared_indices(self):
+    def test_contract_pair_no_shared_indices(self) -> None:
         """Test the contract_pair function when the tensors have no shared indices."""
         tn = TensorNetwork(
             input_indices=[[0, 1], [2, 3]],
@@ -37,7 +37,7 @@ class TestTensorNetworkContraction:
         assert contracted_tn.size_dict == {0: 2, 1: 3, 2: 4, 3: 5}
         assert contracted_tn.shapes == [(2, 3, 4, 5)]
 
-    def test_contract_pair_all_shared_indices(self):
+    def test_contract_pair_all_shared_indices(self) -> None:
         """Test the contract_pair function when the tensors have all shared indices."""
         tn = TensorNetwork(
             input_indices=[[0, 1], [0, 1]],
@@ -51,7 +51,7 @@ class TestTensorNetworkContraction:
         assert contracted_tn.size_dict == {0: 2, 1: 3}
         assert contracted_tn.shapes == [()]
 
-    def test_contract_pair_invalid_indices(self):
+    def test_contract_pair_invalid_indices(self) -> None:
         """Test the contract_pair function when the indices are invalid."""
         tn = TensorNetwork(
             input_indices=[[0, 1], [1, 2], [2, 3]],

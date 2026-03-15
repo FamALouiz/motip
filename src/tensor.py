@@ -14,7 +14,7 @@ class Tensor:
     shape: tuple[int, ...]
     array: ndarray | None
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate the tensor data."""
         if len(self.input_indices) != len(self.shape):
             raise ValueError(

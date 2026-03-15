@@ -7,7 +7,7 @@ from tensor_network.utils.random import generate_random_tn
 class TestRandomTNGeneration:
     """Tests for the random tensor network generation utility."""
 
-    def test_random_tn_generation(self):
+    def test_random_tn_generation(self) -> None:
         """Test the generation of a random tensor network."""
         tn = generate_random_tn(
             num_tensors=5, average_rank=3, max_dim=4, seed=42, generate_arrays=True
@@ -20,7 +20,7 @@ class TestRandomTNGeneration:
         assert all(isinstance(shape, tuple) for shape in tn.shapes)
         assert tn.arrays is not None
 
-    def test_same_seed_produces_same_tn(self):
+    def test_same_seed_produces_same_tn(self) -> None:
         """Test that using the same seed produces the same tensor network."""
         tn1 = generate_random_tn(
             num_tensors=5, average_rank=3, max_dim=4, seed=42, generate_arrays=False

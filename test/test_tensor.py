@@ -9,7 +9,7 @@ from tensor import Tensor
 class TestTensor:
     """Test the Tensor class with various parameter configurations."""
 
-    def test_tensor_as_tuple(self):
+    def test_tensor_as_tuple(self) -> None:
         """Test that the as_tuple method returns the correct shape."""
         tensor = Tensor(
             input_indices=[0, 1],
@@ -31,7 +31,7 @@ class TestTensor:
             ([0, 1], (3, 4), np.ones((3, 4))),
         ],
     )
-    def test_tensor_equality_succeeds(self, other):
+    def test_tensor_equality_succeeds(self, other: object) -> None:
         """Test the equality comparison of Tensor."""
         tensor = Tensor(
             input_indices=[0, 1],
@@ -53,7 +53,7 @@ class TestTensor:
             "not a tensor",
         ],
     )
-    def test_tensor_equality_fails(self, other):
+    def test_tensor_equality_fails(self, other: object) -> None:
         """Test that the equality comparison fails for inequivalent and non-Tensor objects."""
         tensor = Tensor(
             input_indices=[0, 1],
@@ -63,7 +63,7 @@ class TestTensor:
 
         assert tensor != other
 
-    def test_mismatching_information_should_raise_error(self):
+    def test_mismatching_information_should_raise_error(self) -> None:
         """Test that mismatching information raises an error."""
         with pytest.raises(ValueError):
             Tensor(

@@ -1,5 +1,6 @@
 """Tests for the MemoryCalculator class."""
 
+from collections.abc import Iterator
 from copy import deepcopy
 
 import pytest
@@ -12,13 +13,13 @@ from tensor_network import ContractionPath, TensorNetwork
 
 
 @pytest.fixture(params=[1, 4, 8])
-def element_size(request: FixtureRequest):
+def element_size(request: FixtureRequest) -> int:
     """Create different element sizes."""
     return request.param
 
 
 @pytest.fixture(autouse=True)
-def reset_element_size():
+def reset_element_size() -> Iterator[None]:
     """Reset element size between tests."""
     MemoryCalculator().set_element_size(8)
     yield
@@ -46,13 +47,13 @@ def sample_path() -> ContractionPath:
 class TestMemoryCalculatorElementSize:
     """Tests for element-size configuration behavior."""
 
-    def test_default_element_size_is_8_bytes(self):
+    def test_default_element_size_is_8_bytes(self) -> None:
         """Test default element size."""
         calculator = MemoryCalculator()
 
         assert calculator.element_size_in_bytes == Memory(8)
 
-    def test_set_element_size_with_int(self):
+    def test_set_element_size_with_int(self) -> None:
         """Test setting element size with int input."""
         calculator = MemoryCalculator()
 
@@ -61,7 +62,7 @@ class TestMemoryCalculatorElementSize:
         assert result is calculator
         assert calculator.element_size_in_bytes == Memory(4)
 
-    def test_set_element_size_with_memory(self):
+    def test_set_element_size_with_memory(self) -> None:
         """Test setting element size with Memory input."""
         calculator = MemoryCalculator()
         element_size = Memory(16)
@@ -71,14 +72,14 @@ class TestMemoryCalculatorElementSize:
         assert result is calculator
         assert calculator.element_size_in_bytes == element_size
 
-    def test_set_element_size_negative_int_raises_value_error(self):
+    def test_set_element_size_negative_int_raises_value_error(self) -> None:
         """Test negative int element size fails."""
         calculator = MemoryCalculator()
 
         with pytest.raises(ValueError, match="Memory value cannot be negative"):
             calculator.set_element_size(-1)
 
-    def test_element_size_is_not_shared_across_instances(self):
+    def test_element_size_is_not_shared_across_instances(self) -> None:
         """Test class-level element size is reflected by all instances."""
         calculator1 = MemoryCalculator().set_element_size(2)
         calculator2 = MemoryCalculator()
@@ -90,7 +91,7 @@ class TestMemoryCalculatorElementSize:
 class TestMemoryCalculatorTensorMemory:
     """Tests for memory calculation of individual tensors."""
 
-    def test_calculate_memory_for_tensor(self, element_size):
+    def test_calculate_memory_for_tensor(self, element_size: int) -> None:
         """Test memory calculation for a single tensor."""
         calculator = MemoryCalculator().set_element_size(element_size)
         tensor = Tensor(input_indices=[0, 1], shape=(3, 4), array=None)
@@ -105,8 +106,8 @@ class TestMemoryCalculatorPeakMemory:
     """Tests for peak-memory calculation."""
 
     def test_calculate_peak_memory_for_known_network(
-        self, sample_network, sample_path, element_size
-    ):
+        self, sample_network: TensorNetwork, sample_path: ContractionPath, element_size: int
+    ) -> None:
         """Test peak memory against hand-computed expected value."""
         calculator = MemoryCalculator().set_element_size(element_size)
 
@@ -115,8 +116,8 @@ class TestMemoryCalculatorPeakMemory:
         assert peak_memory == Memory(66) * element_size
 
     def test_calculate_peak_memory_empty_path_equals_initial_memory(
-        self, sample_network, element_size
-    ):
+        self, sample_network: TensorNetwork, element_size: int
+    ) -> None:
         """Test peak memory with no contractions."""
         calculator = MemoryCalculator().set_element_size(element_size)
 
@@ -124,7 +125,9 @@ class TestMemoryCalculatorPeakMemory:
 
         assert peak_memory == Memory(56) * element_size
 
-    def test_calculate_peak_memory_does_not_mutate_input_network(self, sample_network, sample_path):
+    def test_calculate_peak_memory_does_not_mutate_input_network(
+        self, sample_network: TensorNetwork, sample_path: ContractionPath
+    ) -> None:
         """Test peak memory calculation leaves input network unchanged."""
         calculator = MemoryCalculator().set_element_size(1)
         original = deepcopy(sample_network)
@@ -138,8 +141,8 @@ class TestMemoryCalculatorTotalMemory:
     """Tests for total-memory calculation."""
 
     def test_calculate_total_memory_for_known_network(
-        self, sample_network, sample_path, element_size
-    ):
+        self, sample_network: TensorNetwork, sample_path: ContractionPath, element_size: int
+    ) -> None:
         """Test total memory against hand-computed expected value."""
         calculator = MemoryCalculator().set_element_size(element_size)
 
@@ -148,8 +151,8 @@ class TestMemoryCalculatorTotalMemory:
         assert total_memory == Memory(80) * element_size
 
     def test_calculate_total_memory_empty_path_equals_initial_memory(
-        self, sample_network, element_size
-    ):
+        self, sample_network: TensorNetwork, element_size: int
+    ) -> None:
         """Test total memory with no contractions."""
         calculator = MemoryCalculator().set_element_size(element_size)
 
@@ -158,8 +161,8 @@ class TestMemoryCalculatorTotalMemory:
         assert total_memory == Memory(56) * element_size
 
     def test_calculate_total_memory_does_not_mutate_input_network(
-        self, sample_network, sample_path
-    ):
+        self, sample_network: TensorNetwork, sample_path: ContractionPath
+    ) -> None:
         """Test total memory calculation leaves input network unchanged."""
         calculator = MemoryCalculator().set_element_size(1)
         original = deepcopy(sample_network)
@@ -173,7 +176,9 @@ class TestMemoryCalculatorErrorHandling:
     """Tests for error propagation and unsupported behaviors."""
 
     @pytest.mark.parametrize("method_name", ["calculate_peak_memory", "calculate_total_memory"])
-    def test_invalid_contraction_index_raises_index_error(self, sample_network, method_name: str):
+    def test_invalid_contraction_index_raises_index_error(
+        self, sample_network: TensorNetwork, method_name: str
+    ) -> None:
         """Test out-of-range contraction indices raise errors."""
         calculator = MemoryCalculator()
         method = getattr(calculator, method_name)
@@ -183,8 +188,8 @@ class TestMemoryCalculatorErrorHandling:
 
     @pytest.mark.parametrize("method_name", ["calculate_peak_memory", "calculate_total_memory"])
     def test_missing_index_size_in_size_dict_raises_key_error(
-        self, sample_network, method_name: str
-    ):
+        self, sample_network: TensorNetwork, method_name: str
+    ) -> None:
         """Test missing index in size dict raises KeyError during contraction."""
         calculator = MemoryCalculator()
         malformed_network = TensorNetwork(
@@ -199,26 +204,34 @@ class TestMemoryCalculatorErrorHandling:
         with pytest.raises(KeyError):
             method(malformed_network, [(1, 2)])
 
-    def test_repeated_tensor_index_in_pair_raises_value_error_peak_memory(self, sample_network):
+    def test_repeated_tensor_index_in_pair_raises_value_error_peak_memory(
+        self, sample_network: TensorNetwork
+    ) -> None:
         """Test invalid contraction pair with same tensor index for peak memory."""
         calculator = MemoryCalculator()
         with pytest.raises(ValueError):
             calculator.calculate_peak_memory(sample_network, [(0, 0)])
 
-    def test_repeated_tensor_index_in_pair_raises_value_error_total_memory(self, sample_network):
+    def test_repeated_tensor_index_in_pair_raises_value_error_total_memory(
+        self, sample_network: TensorNetwork
+    ) -> None:
         """Test invalid contraction pair with same tensor index for total memory."""
         calculator = MemoryCalculator()
         with pytest.raises(ValueError):
             calculator.calculate_total_memory(sample_network, [(0, 0)])
 
-    def test_peak_memory_with_disk_writeback_not_implemented(self, sample_network, sample_path):
+    def test_peak_memory_with_disk_writeback_not_implemented(
+        self, sample_network: TensorNetwork, sample_path: ContractionPath
+    ) -> None:
         """Test unsupported peak-memory writeback mode."""
         calculator = MemoryCalculator()
 
         with pytest.raises(NotImplementedError, match="not yet implemented"):
             calculator.calculate_peak_memory_with_disk_writeback(sample_network, sample_path)
 
-    def test_total_memory_with_disk_writeback_not_implemented(self, sample_network, sample_path):
+    def test_total_memory_with_disk_writeback_not_implemented(
+        self, sample_network: TensorNetwork, sample_path: ContractionPath
+    ) -> None:
         """Test unsupported total-memory writeback mode."""
         calculator = MemoryCalculator()
 

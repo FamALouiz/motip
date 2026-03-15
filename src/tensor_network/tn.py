@@ -27,7 +27,7 @@ class TensorNetwork:
         input_indices: list[list[int]] | None = None,
         shapes: list[tuple[int, ...]] | None = None,
         tensor_arrays: list[ndarray] | None = None,
-    ):
+    ) -> None:
         """Initialize the tensor network from tensors or raw tensor components."""
         self.output_indices = output_indices
         self.size_dict = size_dict
@@ -48,14 +48,20 @@ class TensorNetwork:
                 "The number of tensor arrays must match the number of input index lists."
             )
 
-        arrays = tensor_arrays if tensor_arrays is not None else [None] * len(input_indices)
+        arrays: list[ndarray | None] = []
+        if tensor_arrays is not None:
+            arrays.extend(tensor_arrays)
+        else:
+            arrays.extend([None] * len(input_indices))
         self.tensors = [
             Tensor(tensor_input_indices, shape, array)
-            for tensor_input_indices, shape, array in zip(input_indices, shapes, arrays)
+            for tensor_input_indices, shape, array in zip(
+                input_indices, shapes, arrays, strict=True
+            )
         ]
         self.__post_init__()
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate the tensor network data."""
         for tensor in self.tensors:
             if len(tensor.input_indices) != len(tensor.shape):

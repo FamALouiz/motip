@@ -24,7 +24,7 @@ class Memory:
 
     bytes: int
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         """Validate the memory value."""
         if not isinstance(self.bytes, int):
             raise TypeError("Memory value must be an integer.")

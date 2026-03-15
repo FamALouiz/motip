@@ -36,7 +36,7 @@ class TestMemoryFromString:
             ("1 YB", 1024**8),
         ],
     )
-    def test_from_string_valid_inputs(self, memory_str: str, expected_bytes: int):
+    def test_from_string_valid_inputs(self, memory_str: str, expected_bytes: int) -> None:
         """Test valid memory string parsing for all units."""
         memory = get_memory_from_string(memory_str)
 
@@ -53,7 +53,7 @@ class TestMemoryFromString:
             "1.2.3 MB",
         ],
     )
-    def test_from_string_invalid_inputs_raise_value_error(self, memory_str: str):
+    def test_from_string_invalid_inputs_raise_value_error(self, memory_str: str) -> None:
         """Test invalid memory strings raise ValueError."""
         with pytest.raises(ValueError):
             get_memory_from_string(memory_str)
@@ -62,7 +62,7 @@ class TestMemoryFromString:
 class TestLargestTensorInNetwork:
     """Tests for get_largest_tensor_in_network behavior."""
 
-    def test_largest_tensor_in_network(self, sample_network: TensorNetwork):
+    def test_largest_tensor_in_network(self, sample_network: TensorNetwork) -> None:
         """Test that the largest tensor in the network is correctly identified."""
         expected_largest_tensor_idx = 1
         expected_largest_memory = MemoryCalculator().calculate_memory_for_tensor(
@@ -74,7 +74,7 @@ class TestLargestTensorInNetwork:
         assert largest_tensor_idx == expected_largest_tensor_idx
         assert largest_memory == expected_largest_memory
 
-    def test_empty_network_raises_assertion_error(self):
+    def test_empty_network_raises_assertion_error(self) -> None:
         """Test that an empty tensor network raises an AssertionError."""
         empty_network = TensorNetwork(
             input_indices=[],
