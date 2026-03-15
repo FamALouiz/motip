@@ -20,21 +20,36 @@ def contract_pair(network: TensorNetwork, pair: tuple[int, int]) -> TensorNetwor
         "Tensor indices out of range."
     )
 
+    first_contracted_tensor = network.tensors[pair[0]]
+    second_contracted_tensor = network.tensors[pair[1]]
+
     new_tensor_network = deepcopy(network)
 
-    contracted_indices = set(network.tensors[pair[0]].input_indices) & set(
-        network.tensors[pair[1]].input_indices
+    contracted_indices = set(first_contracted_tensor.input_indices) & set(
+        second_contracted_tensor.input_indices
     )
     new_tensor_indices = (
-        set(network.tensors[pair[0]].input_indices) | set(network.tensors[pair[1]].input_indices)
+        set(first_contracted_tensor.input_indices) | set(second_contracted_tensor.input_indices)
     ) - contracted_indices
-    new_tensor_shape = tuple(network.size_dict[index] for index in new_tensor_indices)
 
     for idx in sorted(pair, reverse=True):
         new_tensor_network.tensors.pop(idx)
 
-    new_tensor_network.tensors.insert(
-        pair[0], Tensor(list(new_tensor_indices), new_tensor_shape, None)
-    )
+    ordered_new_indices = []
+    indicies_placed_so_far = set()
+
+    for idx in first_contracted_tensor.input_indices:
+        if idx in new_tensor_indices and idx not in indicies_placed_so_far:
+            ordered_new_indices.append(idx)
+            indicies_placed_so_far.update(ordered_new_indices)
+
+    for idx in second_contracted_tensor.input_indices:
+        if idx in new_tensor_indices and idx not in indicies_placed_so_far:
+            ordered_new_indices.append(idx)
+            indicies_placed_so_far.update(ordered_new_indices)
+
+    new_tensor_shape = tuple(network.size_dict[index] for index in ordered_new_indices)
+
+    new_tensor_network.tensors.insert(pair[0], Tensor(ordered_new_indices, new_tensor_shape, None))
 
     return new_tensor_network
