@@ -3,11 +3,18 @@
 from copy import deepcopy
 
 import pytest
+from _pytest.fixtures import FixtureRequest
 
 from memory import Memory
 from memory.calculator import MemoryCalculator
 from tensor import Tensor
 from tensor_network import TensorNetwork
+
+
+@pytest.fixture(params=[1, 4, 8])
+def element_size(request: FixtureRequest):
+    """Create different element sizes."""
+    return request.param
 
 
 @pytest.fixture(autouse=True)
@@ -83,35 +90,39 @@ class TestMemoryCalculatorElementSize:
 class TestMemoryCalculatorTensorMemory:
     """Tests for memory calculation of individual tensors."""
 
-    def test_calculate_memory_for_tensor(self):
+    def test_calculate_memory_for_tensor(self, element_size):
         """Test memory calculation for a single tensor."""
-        calculator = MemoryCalculator().set_element_size(4)
+        calculator = MemoryCalculator().set_element_size(element_size)
         tensor = Tensor(input_indices=[0, 1], shape=(3, 4), array=None)
 
         memory = calculator.calculate_memory_for_tensor(tensor)
 
-        expected_memory = Memory(4 * 3 * 4)  # element size * num elements
+        expected_memory = Memory(4 * 3 * element_size)  # element size * num elements
         assert memory == expected_memory
 
 
 class TestMemoryCalculatorPeakMemory:
     """Tests for peak-memory calculation."""
 
-    def test_calculate_peak_memory_for_known_network(self, sample_network, sample_path):
+    def test_calculate_peak_memory_for_known_network(
+        self, sample_network, sample_path, element_size
+    ):
         """Test peak memory against hand-computed expected value."""
-        calculator = MemoryCalculator().set_element_size(1)
+        calculator = MemoryCalculator().set_element_size(element_size)
 
         peak_memory = calculator.calculate_peak_memory(sample_network, sample_path)
 
-        assert peak_memory == Memory(66)
+        assert peak_memory == Memory(66) * element_size
 
-    def test_calculate_peak_memory_empty_path_equals_initial_memory(self, sample_network):
+    def test_calculate_peak_memory_empty_path_equals_initial_memory(
+        self, sample_network, element_size
+    ):
         """Test peak memory with no contractions."""
-        calculator = MemoryCalculator().set_element_size(1)
+        calculator = MemoryCalculator().set_element_size(element_size)
 
         peak_memory = calculator.calculate_peak_memory(sample_network, [])
 
-        assert peak_memory == Memory(56)
+        assert peak_memory == Memory(56) * element_size
 
     def test_calculate_peak_memory_does_not_mutate_input_network(self, sample_network, sample_path):
         """Test peak memory calculation leaves input network unchanged."""
@@ -126,21 +137,25 @@ class TestMemoryCalculatorPeakMemory:
 class TestMemoryCalculatorTotalMemory:
     """Tests for total-memory calculation."""
 
-    def test_calculate_total_memory_for_known_network(self, sample_network, sample_path):
+    def test_calculate_total_memory_for_known_network(
+        self, sample_network, sample_path, element_size
+    ):
         """Test total memory against hand-computed expected value."""
-        calculator = MemoryCalculator().set_element_size(1)
+        calculator = MemoryCalculator().set_element_size(element_size)
 
         total_memory = calculator.calculate_total_memory(sample_network, sample_path)
 
-        assert total_memory == Memory(80)
+        assert total_memory == Memory(80) * element_size
 
-    def test_calculate_total_memory_empty_path_equals_initial_memory(self, sample_network):
+    def test_calculate_total_memory_empty_path_equals_initial_memory(
+        self, sample_network, element_size
+    ):
         """Test total memory with no contractions."""
-        calculator = MemoryCalculator().set_element_size(1)
+        calculator = MemoryCalculator().set_element_size(element_size)
 
         total_memory = calculator.calculate_total_memory(sample_network, [])
 
-        assert total_memory == Memory(56)
+        assert total_memory == Memory(56) * element_size
 
     def test_calculate_total_memory_does_not_mutate_input_network(
         self, sample_network, sample_path
