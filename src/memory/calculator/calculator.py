@@ -57,10 +57,10 @@ class MemoryCalculator:
         Returns:
             The initial memory requirements.
         """
-        total_elements = sum(
+        total_memory = sum(
             self.calculate_memory_for_tensor(tensor).bytes for tensor in network.tensors
         )
-        return self.__element_size_in_bytes * total_elements
+        return Memory(total_memory)
 
     def __calculate_memory_for_contraction_pair(
         self, network: TensorNetwork, contraction_pair: tuple[int, int]
@@ -86,12 +86,12 @@ class MemoryCalculator:
         self, network: TensorNetwork, contraction_pair: tuple[int, int]
     ) -> Memory:
         """Calculate the memory for tensors that are no longer used after a contraction."""
-        total_elements_to_remove = sum(
+        total_memory_to_remove = sum(
             self.calculate_memory_for_tensor(network.tensors[tensor_idx]).bytes
             for tensor_idx in contraction_pair
         )
 
-        return self.__element_size_in_bytes * total_elements_to_remove
+        return Memory(total_memory_to_remove)
 
     def calculate_peak_memory(self, tn: TensorNetwork, contraction_path: ContractionPath) -> Memory:
         """Calculate the peak memory requirements of a tensor network contraction.
