@@ -3,6 +3,7 @@
 import numpy as np
 import pytest
 
+from tensor import Tensor
 from tensor_network import TensorNetwork
 
 
@@ -135,4 +136,32 @@ class TestTensorNetwork:
                 size_dict={0: 3, 1: 4, 2: 5},
                 shapes=[(3, 4)],
                 tensor_arrays=[np.random.rand(3, 4), np.random.rand(4, 5)],
+            )
+
+    def test_initialization_from_tensors(self):
+        """Test that TensorNetwork can be initialized directly from tensor objects."""
+        tensors = [
+            Tensor([0, 1], (3, 4), np.ones((3, 4))),
+            Tensor([1, 2], (4, 5), np.ones((4, 5))),
+        ]
+
+        network = TensorNetwork(
+            tensors=tensors,
+            output_indices=[0],
+            size_dict={0: 3, 1: 4, 2: 5},
+        )
+
+        assert network.tensors == tensors
+        assert network.input_indices == [[0, 1], [1, 2]]
+        assert network.shapes == [(3, 4), (4, 5)]
+
+    def test_initialization_without_required_tensor_data_should_raise_error(self):
+        """Test that initialization fails without tensors and without raw tensor components."""
+        with pytest.raises(
+            ValueError,
+            match="Either tensors or both input_indices and shapes must be provided.",
+        ):
+            TensorNetwork(
+                output_indices=[0],
+                size_dict={0: 3, 1: 4, 2: 5},
             )
