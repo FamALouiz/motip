@@ -62,3 +62,17 @@ class TestTensorNetworkContraction:
         )
         with pytest.raises(AssertionError, match="Tensor indices out of range."):
             contract_pair(tn, (0, 3))
+
+    def test_contract_pair_perserves_order_of_uncontracted_indices(self) -> None:
+        """Test that the contract_pair function preserves the order of uncontracted indices."""
+        tn = TensorNetwork(
+            input_indices=[[0, 3, 2], [2, 1, 4]],
+            size_dict={0: 2, 1: 3, 2: 4, 3: 5, 4: 6},
+            shapes=[(2, 3, 4), (4, 5, 6)],
+            output_indices=[0, 3],
+            tensor_arrays=None,
+        )
+        contracted_tn = contract_pair(tn, (0, 1))
+        assert contracted_tn.input_indices == [[0, 3, 1, 4]]
+        assert contracted_tn.size_dict == {0: 2, 1: 3, 2: 4, 3: 5, 4: 6}
+        assert contracted_tn.shapes == [(2, 5, 3, 6)]
