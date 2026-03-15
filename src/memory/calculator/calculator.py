@@ -65,7 +65,10 @@ class MemoryCalculator:
     def __calculate_memory_for_contraction_pair(
         self, network: TensorNetwork, contraction_pair: tuple[int, int]
     ) -> Memory:
-        """Calculate the memory requirements for a single contraction pair."""
+        """Calculate the memory requirements for a single contraction pair.
+
+        The contraction itself is not performed.
+        """
         if contraction_pair[0] == contraction_pair[1]:
             raise ValueError("Contraction pair cannot consist of the same tensor index.")
         contracted_indices = set(network.input_indices[contraction_pair[0]]) & set(
@@ -76,11 +79,13 @@ class MemoryCalculator:
             set(network.input_indices[contraction_pair[0]])
             | set(network.input_indices[contraction_pair[1]])
         ) - contracted_indices
-
         new_tensor_shape = tuple(network.size_dict[index] for index in new_tensor_indices)
-        new_tensor_elements = math.prod(new_tensor_shape)
 
-        return self.__element_size_in_bytes * new_tensor_elements
+        new_tensor = Tensor(
+            input_indices=list(new_tensor_indices), shape=new_tensor_shape, array=None
+        )
+
+        return self.calculate_memory_for_tensor(new_tensor)
 
     def __calculate_memory_for_unused_tensors(
         self, network: TensorNetwork, contraction_pair: tuple[int, int]
