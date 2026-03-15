@@ -26,15 +26,18 @@ select = ["E", "F", "D", "I"]
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
-[tool.pyrefly]
-project-includes = [
-    "**/*.py*",
-    "**/*.ipynb",
+[tool.mypy]
+files = [
+    "**/*.py",
 ]
+ignore_missing_imports = true
+check_untyped_defs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
 
 [dependency-groups]
 dev = [
-    "pyrefly>=0.54.0",
+    "mypy>=1.19.1",
     "pytest-cov>=7.0.0",
     "pytest>=9.0.2",
     "ruff>=0.15.4",
