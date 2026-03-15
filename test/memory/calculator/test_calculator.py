@@ -8,7 +8,7 @@ from _pytest.fixtures import FixtureRequest
 from memory import Memory
 from memory.calculator import MemoryCalculator
 from tensor import Tensor
-from tensor_network import TensorNetwork
+from tensor_network import ContractionPath, TensorNetwork
 
 
 @pytest.fixture(params=[1, 4, 8])
@@ -38,7 +38,7 @@ def sample_network() -> TensorNetwork:
 
 
 @pytest.fixture
-def sample_path() -> list[tuple[int, int]]:
+def sample_path() -> ContractionPath:
     """Contraction path for the sample network."""
     return [(0, 1), (0, 1)]
 
