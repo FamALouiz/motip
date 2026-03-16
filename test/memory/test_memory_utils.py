@@ -2,6 +2,7 @@
 
 import pytest
 
+from contraction.tensor_network import contract_tensors_in_network
 from memory.calculator import MemoryCalculator
 from memory.utils import (
     get_largest_intermediate_tensor_in_contraction_path,
@@ -9,7 +10,7 @@ from memory.utils import (
     get_memory_from_string,
 )
 from tensor_network import TensorNetwork
-from tensor_network.utils.contraction import contract_pair
+from tensor_network.utils.contraction import contract_pair_of_tensors_in_network
 
 
 @pytest.fixture
@@ -132,7 +133,7 @@ class TestLargestIntermediateTensorInContractionPath:
             network, path
         )
 
-        after_first_contraction = contract_pair(network, path[0])
+        after_first_contraction = contract_tensors_in_network(network, path[0])
         expected_memory = MemoryCalculator().calculate_memory_for_tensor(
             after_first_contraction.tensors[0]
         )
@@ -154,8 +155,8 @@ class TestLargestIntermediateTensorInContractionPath:
             network, path
         )
 
-        after_first_contraction = contract_pair(network, path[0])
-        after_second_contraction = contract_pair(after_first_contraction, path[1])
+        after_first_contraction = contract_tensors_in_network(network, path[0])
+        after_second_contraction = contract_tensors_in_network(after_first_contraction, path[1])
         expected_memory = MemoryCalculator().calculate_memory_for_tensor(
             after_second_contraction.tensors[0]
         )

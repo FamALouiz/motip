@@ -3,10 +3,18 @@
 import math
 from copy import deepcopy
 
+from contraction.path import ContractionPath
+from contraction.tensor import (
+    get_indices_after_contraction,
+)
+from contraction.tensor_network import contract_tensors_in_network
 from memory.memory import Memory
 from tensor import Tensor
 from tensor_network import ContractionPath, TensorNetwork
-from tensor_network.utils.contraction import contract_pair
+from tensor_network.utils.contraction import (
+    contract_pair_of_tensors_in_network,
+    get_indices_after_contraction,
+)
 
 
 class MemoryCalculator:
@@ -71,14 +79,10 @@ class MemoryCalculator:
         """
         if contraction_pair[0] == contraction_pair[1]:
             raise ValueError("Contraction pair cannot consist of the same tensor index.")
-        contracted_indices = set(network.input_indices[contraction_pair[0]]) & set(
-            network.input_indices[contraction_pair[1]]
-        )
 
-        new_tensor_indices = (
-            set(network.input_indices[contraction_pair[0]])
-            | set(network.input_indices[contraction_pair[1]])
-        ) - contracted_indices
+        new_tensor_indices = get_indices_after_contraction(
+            network.tensors[contraction_pair[0]], network.tensors[contraction_pair[1]]
+        )
         new_tensor_shape = tuple(network.size_dict[index] for index in new_tensor_indices)
 
         new_tensor = Tensor(
@@ -123,7 +127,7 @@ class MemoryCalculator:
             total_memory += self.__calculate_memory_for_contraction_pair(network, contraction_pair)
             peak_memory = max(peak_memory, total_memory)
             total_memory -= self.__calculate_memory_for_unused_tensors(network, contraction_pair)
-            network = contract_pair(network, contraction_pair)
+            network = contract_tensors_in_network(network, contraction_pair)
 
         return peak_memory
 
@@ -148,7 +152,7 @@ class MemoryCalculator:
 
         for contraction_pair in contraction_path:
             total_memory += self.__calculate_memory_for_contraction_pair(network, contraction_pair)
-            network = contract_pair(network, contraction_pair)
+            network = contract_tensors_in_network(network, contraction_pair)
 
         return total_memory
 

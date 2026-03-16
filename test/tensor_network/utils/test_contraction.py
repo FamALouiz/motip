@@ -2,8 +2,8 @@
 
 import pytest
 
+from contraction.tensor_network import contract_tensors_in_network
 from tensor_network import TensorNetwork
-from tensor_network.utils.contraction import contract_pair
 
 
 class TestTensorNetworkContraction:
@@ -18,7 +18,9 @@ class TestTensorNetworkContraction:
             output_indices=[0, 3],
             tensor_arrays=None,
         )
-        contracted_tn = contract_pair(tn, (0, 1))
+
+        contracted_tn = contract_tensors_in_network(tn, (0, 1))
+
         assert contracted_tn.input_indices == [[0, 2], [2, 3]]
         assert contracted_tn.size_dict == {0: 2, 1: 3, 2: 4, 3: 5}
         assert contracted_tn.shapes == [(2, 4), (4, 5)]
@@ -32,7 +34,9 @@ class TestTensorNetworkContraction:
             output_indices=[0, 2],
             tensor_arrays=None,
         )
-        contracted_tn = contract_pair(tn, (0, 1))
+
+        contracted_tn = contract_tensors_in_network(tn, (0, 1))
+
         assert contracted_tn.input_indices == [[0, 1, 2, 3]]
         assert contracted_tn.size_dict == {0: 2, 1: 3, 2: 4, 3: 5}
         assert contracted_tn.shapes == [(2, 3, 4, 5)]
@@ -46,7 +50,9 @@ class TestTensorNetworkContraction:
             output_indices=[0],
             tensor_arrays=None,
         )
-        contracted_tn = contract_pair(tn, (0, 1))
+
+        contracted_tn = contract_tensors_in_network(tn, (0, 1))
+
         assert contracted_tn.input_indices == [[]]
         assert contracted_tn.size_dict == {0: 2, 1: 3}
         assert contracted_tn.shapes == [()]
@@ -61,18 +67,38 @@ class TestTensorNetworkContraction:
             tensor_arrays=None,
         )
         with pytest.raises(AssertionError, match="Tensor indices out of range."):
-            contract_pair(tn, (0, 3))
+            contract_tensors_in_network(tn, (0, 3))
 
     def test_contract_pair_perserves_order_of_uncontracted_indices(self) -> None:
         """Test that the contract_pair function preserves the order of uncontracted indices."""
         tn = TensorNetwork(
             input_indices=[[0, 3, 2], [2, 1, 4]],
             size_dict={0: 2, 1: 3, 2: 4, 3: 5, 4: 6},
-            shapes=[(2, 3, 4), (4, 5, 6)],
+            shapes=[(2, 5, 4), (4, 3, 6)],
             output_indices=[0, 3],
             tensor_arrays=None,
         )
-        contracted_tn = contract_pair(tn, (0, 1))
+
+        contracted_tn = contract_tensors_in_network(tn, (0, 1))
+
         assert contracted_tn.input_indices == [[0, 3, 1, 4]]
         assert contracted_tn.size_dict == {0: 2, 1: 3, 2: 4, 3: 5, 4: 6}
         assert contracted_tn.shapes == [(2, 5, 3, 6)]
+
+    def test_end_to_end_two_step_contraction(self) -> None:
+        """Test end-to-end two-step contraction behaviour."""
+        tn = TensorNetwork(
+            input_indices=[[0, 1], [1, 2], [2, 3]],
+            size_dict={0: 2, 1: 3, 2: 4, 3: 5},
+            shapes=[(2, 3), (3, 4), (4, 5)],
+            output_indices=[0, 3],
+            tensor_arrays=None,
+        )
+
+        first_step = contract_tensors_in_network(tn, (0, 1))
+        assert first_step.input_indices == [[0, 2], [2, 3]]
+
+        second_step = contract_tensors_in_network(first_step, (0, 1))
+
+        assert second_step.input_indices == [[0, 3]]
+        assert second_step.shapes == [(2, 5)]

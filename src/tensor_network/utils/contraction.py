@@ -6,7 +6,40 @@ from tensor import Tensor
 from tensor_network import TensorNetwork
 
 
-def contract_pair(network: TensorNetwork, pair: tuple[int, int]) -> TensorNetwork:
+def contract_tensors(tensor_a: Tensor, tensor_b: Tensor) -> Tensor:
+    """Contract two tensors together.
+
+    Args:
+        tensor_a: The first tensor to contract.
+        tensor_b: The second tensor to contract.
+
+    Returns:
+        The resulting tensor after contraction.
+    """
+    new_tensor_indices = get_indices_after_contraction(tensor_a, tensor_b)
+
+    ordered_new_indices = []
+    new_tensor_shape = []
+    indicies_placed_so_far = set()
+
+    for idx, shape in zip(tensor_a.input_indices, tensor_a.shape, strict=True):
+        if idx in new_tensor_indices and idx not in indicies_placed_so_far:
+            ordered_new_indices.append(idx)
+            new_tensor_shape.append(shape)
+            indicies_placed_so_far.update(ordered_new_indices)
+
+    for idx, shape in zip(tensor_b.input_indices, tensor_b.shape, strict=True):
+        if idx in new_tensor_indices and idx not in indicies_placed_so_far:
+            ordered_new_indices.append(idx)
+            new_tensor_shape.append(shape)
+            indicies_placed_so_far.update(ordered_new_indices)
+
+    return Tensor(ordered_new_indices, tuple(new_tensor_shape), None)
+
+
+def contract_pair_of_tensors_in_network(
+    network: TensorNetwork, pair: tuple[int, int]
+) -> TensorNetwork:
     """Contract a pair of tensors in the network.
 
     Args:
@@ -23,33 +56,29 @@ def contract_pair(network: TensorNetwork, pair: tuple[int, int]) -> TensorNetwor
     first_contracted_tensor = network.tensors[pair[0]]
     second_contracted_tensor = network.tensors[pair[1]]
 
+    for idx in sorted(pair, reverse=True):
+        network.tensors.pop(idx)
+
+    new_tensor = contract_tensors(first_contracted_tensor, second_contracted_tensor)
     new_tensor_network = deepcopy(network)
 
-    contracted_indices = set(first_contracted_tensor.input_indices) & set(
-        second_contracted_tensor.input_indices
-    )
-    new_tensor_indices = (
-        set(first_contracted_tensor.input_indices) | set(second_contracted_tensor.input_indices)
-    ) - contracted_indices
-
-    for idx in sorted(pair, reverse=True):
-        new_tensor_network.tensors.pop(idx)
-
-    ordered_new_indices = []
-    indicies_placed_so_far = set()
-
-    for idx in first_contracted_tensor.input_indices:
-        if idx in new_tensor_indices and idx not in indicies_placed_so_far:
-            ordered_new_indices.append(idx)
-            indicies_placed_so_far.update(ordered_new_indices)
-
-    for idx in second_contracted_tensor.input_indices:
-        if idx in new_tensor_indices and idx not in indicies_placed_so_far:
-            ordered_new_indices.append(idx)
-            indicies_placed_so_far.update(ordered_new_indices)
-
-    new_tensor_shape = tuple(network.size_dict[index] for index in ordered_new_indices)
-
-    new_tensor_network.tensors.insert(pair[0], Tensor(ordered_new_indices, new_tensor_shape, None))
+    new_tensor_network.tensors.insert(pair[0], new_tensor)
 
     return new_tensor_network
+
+
+def get_contracted_indices(tensor_a: Tensor, tensor_b: Tensor) -> set[int]:
+    """Get the set of contracted indices between two tensors."""
+    contracted_indices = set(tensor_a.input_indices) & set(tensor_b.input_indices)
+
+    return contracted_indices
+
+
+def get_indices_after_contraction(tensor_a: Tensor, tensor_b: Tensor) -> set[int]:
+    """Get the set of indices that will be present in the new tensor after contraction."""
+    contracted_indices = get_contracted_indices(tensor_a, tensor_b)
+    new_tensor_indices = (
+        set(tensor_a.input_indices) | set(tensor_b.input_indices)
+    ) - contracted_indices
+
+    return new_tensor_indices
