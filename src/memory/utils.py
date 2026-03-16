@@ -54,18 +54,10 @@ def get_largest_intermediate_tensor_in_contraction_path(
     largest_contraction_step_idx = -1  # -1 indicates largest tensor is from the original network
     intermediate_network = deepcopy(network)
 
-    for tensor in intermediate_network.tensors:
-        print(tensor)
-    print()
-
     for contraction_idx, contraction_pair in enumerate(path):
         intermediate_network = contract_tensors_in_network(intermediate_network, contraction_pair)
         intermediate_tensor = intermediate_network.tensors[contraction_pair[0]]
         intermediate_memory = MemoryCalculator().calculate_memory_for_tensor(intermediate_tensor)
-
-        for tensor in intermediate_network.tensors:
-            print(tensor)
-        print()
 
         if intermediate_memory > largest_memory:
             largest_memory = intermediate_memory
