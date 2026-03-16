@@ -155,3 +155,24 @@ class Memory:
     def to_yottabytes(self) -> float:
         """Return the memory in yottabytes."""
         return self.bytes / MemorySizes.YB
+
+    @classmethod
+    def from_string(cls, memory_str: str) -> "Memory":
+        """Create a Memory object from a string representation.
+
+        Args:
+            memory_str: A string like "64MB", "1GB", etc.
+
+        Returns:
+            A Memory object representing the specified memory size.
+
+        Raises:
+            ValueError: If the input string is not in a valid format.
+        """
+        memory_str = memory_str.strip().upper()
+        for unit in reversed(MemorySizes):
+            if memory_str.endswith(unit.name):
+                value = float(memory_str[: -len(unit.name)].strip())
+                bytes_value = int(value * unit)
+                return cls(bytes=bytes_value)
+        raise ValueError(f"Invalid memory string: {memory_str}")
