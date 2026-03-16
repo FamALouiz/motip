@@ -3,6 +3,7 @@
 from copy import deepcopy
 
 from contraction.path import ContractionPath
+
 from contraction.tensor_network import contract_tensors_in_network
 from memory.calculator import MemoryCalculator
 from memory.memory import Memory, MemorySizes

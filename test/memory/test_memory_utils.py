@@ -10,7 +10,6 @@ from memory.utils import (
     get_memory_from_string,
 )
 from tensor_network import TensorNetwork
-from tensor_network.utils.contraction import contract_pair_of_tensors_in_network
 
 
 @pytest.fixture

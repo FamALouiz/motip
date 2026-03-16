@@ -1,5 +1,6 @@
 """Utils module for the motip package."""
 
-from tensor_network.utils import contraction, permutation, random
+from contraction import tensor
+from tensor_network.utils import permutation, random
 
-__all__ = ["random", "contraction", "permutation"]
+__all__ = ["random", "tensor", "permutation"]

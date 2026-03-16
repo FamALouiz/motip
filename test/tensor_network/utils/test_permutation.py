@@ -22,6 +22,7 @@ class TestPermuteTensor:
 
         assert permuted.input_indices == [12, 10, 11]
         assert permuted.shape == (4, 2, 3)
+        assert tensor.array is not None and permuted.array is not None
         assert (permuted.array == np.transpose(tensor.array, axes=[2, 0, 1])).all()
 
     @pytest.mark.parametrize(
