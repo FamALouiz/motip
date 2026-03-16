@@ -6,10 +6,11 @@ from copy import deepcopy
 import pytest
 from _pytest.fixtures import FixtureRequest
 
+from contraction.path import ContractionPath
 from memory import Memory
 from memory.calculator import MemoryCalculator
 from tensor import Tensor
-from tensor_network import ContractionPath, TensorNetwork
+from tensor_network import TensorNetwork
 
 
 @pytest.fixture(params=[1, 4, 8])

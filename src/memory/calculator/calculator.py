@@ -4,14 +4,11 @@ import math
 from copy import deepcopy
 
 from contraction.path import ContractionPath
-
-from contraction.tensor import (
-    get_indices_after_contraction,
-)
+from contraction.tensor import get_indices_after_contraction
 from contraction.tensor_network import contract_tensors_in_network
 from memory.memory import Memory
 from tensor import Tensor
-from tensor_network import ContractionPath, TensorNetwork
+from tensor_network import TensorNetwork
 
 
 class MemoryCalculator:
