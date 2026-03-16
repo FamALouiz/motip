@@ -103,3 +103,19 @@ class TestTensorNetworkContraction:
 
         assert second_step.input_indices == [[0, 3]]
         assert second_step.shapes == [(2, 5)]
+
+    def test_contraction_does_not_mutate_input_network(self) -> None:
+        """Test that contracting tensors does not mutate the input network."""
+        tn = TensorNetwork(
+            input_indices=[[0, 1], [1, 2], [2, 3]],
+            size_dict={0: 2, 1: 3, 2: 4, 3: 5},
+            shapes=[(2, 3), (3, 4), (4, 5)],
+            output_indices=[0, 3],
+            tensor_arrays=None,
+        )
+
+        _ = contract_tensors_in_network(tn, (0, 1))
+
+        assert tn.input_indices == [[0, 1], [1, 2], [2, 3]]
+        assert tn.size_dict == {0: 2, 1: 3, 2: 4, 3: 5}
+        assert tn.shapes == [(2, 3), (3, 4), (4, 5)]
