@@ -84,6 +84,7 @@ def main() -> None:
                 max_dim=args.max_dim,
                 seed=rng.randint(0, 10**9) + run_idx,
                 generate_arrays=True,
+                num_output_indices=rng.randint(0, num_tensors - 1),
             )
 
             predicted_initial_memory = calculator.calculate_total_memory(tn, []).to_bytes
