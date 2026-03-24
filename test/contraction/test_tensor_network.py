@@ -2,7 +2,7 @@
 
 import pytest
 
-from contraction.tensor_network import contract_tensors_in_network
+from contraction.tensor_network import contract_network, contract_tensors_in_network
 from tensor_network import TensorNetwork
 
 
@@ -119,3 +119,25 @@ class TestTensorNetworkContraction:
         assert tn.input_indices == [[0, 1], [1, 2], [2, 3]]
         assert tn.size_dict == {0: 2, 1: 3, 2: 4, 3: 5}
         assert tn.shapes == [(2, 3), (3, 4), (4, 5)]
+
+
+class TestContractNetwork:
+    """Test the contract_network function."""
+
+    def test_contract_network_end_to_end(self) -> None:
+        """Test end-to-end contraction of a network."""
+        tn = TensorNetwork(
+            input_indices=[[0, 1], [1, 2], [2, 3]],
+            size_dict={0: 2, 1: 3, 2: 4, 3: 5},
+            shapes=[(2, 3), (3, 4), (4, 5)],
+            output_indices=[0, 3],
+            tensor_arrays=None,
+        )
+
+        contraction_path = [(0, 1), (0, 1)]
+
+        contracted_tn = contract_network(tn, contraction_path)
+
+        assert contracted_tn.input_indices == [[0, 3]]
+        assert contracted_tn.size_dict == {0: 2, 1: 3, 2: 4, 3: 5}
+        assert contracted_tn.shapes == [(2, 5)]

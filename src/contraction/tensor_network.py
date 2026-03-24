@@ -32,3 +32,22 @@ def contract_tensors_in_network(network: TensorNetwork, pair: tuple[int, int]) -
     new_tensor_network.tensors.insert(pair[0], new_tensor)
 
     return new_tensor_network
+
+
+def contract_network(
+    network: TensorNetwork, contraction_path: list[tuple[int, int]]
+) -> TensorNetwork:
+    """Contract a tensor network according to a given contraction path.
+
+    Args:
+        network: The tensor network to contract.
+        contraction_path: A list of tuples, where each tuple contains the indices of the tensors to
+            contract at each step.
+
+    Returns:
+        The resulting tensor network after performing all contractions in the path.
+    """
+    current_network = deepcopy(network)
+    for pair in contraction_path:
+        current_network = contract_tensors_in_network(current_network, pair)
+    return current_network
