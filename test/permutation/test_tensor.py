@@ -3,8 +3,8 @@
 import numpy as np
 import pytest
 
+from permutation.tensor import permute_tensor
 from tensor import Tensor
-from tensor_network.utils.permutation import permute_tensor
 
 
 class TestPermuteTensor:
