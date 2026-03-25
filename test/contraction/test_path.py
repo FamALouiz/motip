@@ -9,7 +9,7 @@ from contraction.tensor_network import contract_tensors_in_network
 from tensor_network import TensorNetwork
 
 
-class TestContractionPathWithHistory:
+class TestPersistentContractionPath:
     """Tests for contraction path history simulation and state access."""
 
     def test_history_length_must_match_path_length_plus_one(self) -> None:
@@ -114,3 +114,20 @@ class TestContractionPathWithHistory:
 
         with pytest.raises(AssertionError, match="Tensor indices out of range."):
             PersistentContractionPath.from_contraction_path(network, [(0, 2)])
+
+    def test_history_shares_uncontracted_tensor_references_between_steps(self) -> None:
+        """Test that uncontracted tensors are shared by reference across history states."""
+        network = TensorNetwork(
+            input_indices=[[0, 1], [1, 2], [3, 4]],
+            output_indices=[0, 2, 3, 4],
+            shapes=[(2, 3), (3, 4), (5, 6)],
+            size_dict={0: 2, 1: 3, 2: 4, 3: 5, 4: 6},
+            tensor_arrays=None,
+        )
+
+        with_history = PersistentContractionPath.from_contraction_path(network, [(0, 1)])
+
+        # Tensor at index 2 in step 0 is not contracted and should be reused in step 1.
+        with_history.history[0].tensors[2].input_indices[0] = 999
+
+        assert with_history.history[1].tensors[1].input_indices[0] == 999
