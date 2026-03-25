@@ -1,6 +1,21 @@
 """Tensor network contraction utilities."""
 
+import numpy as np
+
 from tensor import Tensor
+
+
+def _contract_tensor_arrays(tensor_a: Tensor, tensor_b: Tensor) -> np.ndarray:
+    assert tensor_a.array is not None and tensor_b.array is not None, (
+        "Both tensors must have arrays to contract."
+    )
+
+    contracted_indices = get_contracted_indices(tensor_a, tensor_b)
+    axes_a = tuple(tensor_a.input_indices.index(idx) for idx in contracted_indices)
+    axes_b = tuple(tensor_b.input_indices.index(idx) for idx in contracted_indices)
+    contracted_array = np.tensordot(tensor_a.array, tensor_b.array, axes=(axes_a, axes_b))
+
+    return contracted_array
 
 
 def contract_tensors(tensor_a: Tensor, tensor_b: Tensor) -> Tensor:
@@ -31,7 +46,11 @@ def contract_tensors(tensor_a: Tensor, tensor_b: Tensor) -> Tensor:
             new_tensor_shape.append(shape)
             indicies_placed_so_far.update(ordered_new_indices)
 
-    return Tensor(ordered_new_indices, tuple(new_tensor_shape), None)
+    new_array = None
+    if tensor_a.array is not None and tensor_b.array is not None:
+        new_array = _contract_tensor_arrays(tensor_a, tensor_b)
+
+    return Tensor(ordered_new_indices, tuple(new_tensor_shape), new_array)
 
 
 def get_contracted_indices(tensor_a: Tensor, tensor_b: Tensor) -> set[int]:
