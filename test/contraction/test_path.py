@@ -4,7 +4,7 @@ from copy import deepcopy
 
 import pytest
 
-from contraction.path import ContractionPathWithHistory
+from contraction.path import PersistentContractionPath
 from contraction.tensor_network import contract_tensors_in_network
 from tensor_network import TensorNetwork
 
@@ -26,7 +26,7 @@ class TestContractionPathWithHistory:
             ValueError,
             match="History must contain the initial state and one state per contraction.",
         ):
-            ContractionPathWithHistory(path=[(0, 1)], history=[network])
+            PersistentContractionPath(path=[(0, 1)], history=[network])
 
     def test_from_contraction_path_with_empty_path(self) -> None:
         """Test history creation when no contractions are performed."""
@@ -38,7 +38,7 @@ class TestContractionPathWithHistory:
             tensor_arrays=None,
         )
 
-        history = ContractionPathWithHistory.from_contraction_path(network, [])
+        history = PersistentContractionPath.from_contraction_path(network, [])
 
         assert history.path == []
         assert history.num_steps == 0
@@ -58,7 +58,7 @@ class TestContractionPathWithHistory:
         path = ((0, 1), (0, 1))
         initial_network = deepcopy(network)
 
-        with_history = ContractionPathWithHistory.from_contraction_path(network, path)
+        with_history = PersistentContractionPath.from_contraction_path(network, path)
         expected_after_first = contract_tensors_in_network(initial_network, (0, 1))
         expected_after_second = contract_tensors_in_network(expected_after_first, (0, 1))
 
@@ -81,7 +81,7 @@ class TestContractionPathWithHistory:
             size_dict={0: 2, 1: 3, 2: 4},
             tensor_arrays=None,
         )
-        with_history = ContractionPathWithHistory.from_contraction_path(network, [(0, 1)])
+        with_history = PersistentContractionPath.from_contraction_path(network, [(0, 1)])
 
         with pytest.raises(IndexError, match="Step out of range."):
             with_history.get_state(step)
@@ -95,7 +95,7 @@ class TestContractionPathWithHistory:
             size_dict={0: 2, 1: 3, 2: 4, 3: 5},
             tensor_arrays=None,
         )
-        with_history = ContractionPathWithHistory.from_contraction_path(network, [(0, 1), (0, 1)])
+        with_history = PersistentContractionPath.from_contraction_path(network, [(0, 1), (0, 1)])
 
         state = with_history.get_state(1)
         state.tensors[0].input_indices[0] = 999
@@ -113,4 +113,4 @@ class TestContractionPathWithHistory:
         )
 
         with pytest.raises(AssertionError, match="Tensor indices out of range."):
-            ContractionPathWithHistory.from_contraction_path(network, [(0, 2)])
+            PersistentContractionPath.from_contraction_path(network, [(0, 2)])

@@ -12,7 +12,7 @@ ContractionPath: TypeAlias = Sequence[tuple[int, int]]
 
 
 @dataclass
-class ContractionPathWithHistory:
+class PersistentContractionPath:
     """Contraction path with all intermediate tensor network states."""
 
     path: ContractionPath
@@ -28,7 +28,7 @@ class ContractionPathWithHistory:
     @classmethod
     def from_contraction_path(
         cls, network: TensorNetwork, contraction_path: ContractionPath
-    ) -> "ContractionPathWithHistory":
+    ) -> "PersistentContractionPath":
         """Create contraction history by simulating all contractions in order."""
         path = list(contraction_path)
         current_network = deepcopy(network)
