@@ -16,9 +16,7 @@ def contract_tensors_in_network(network: TensorNetwork, pair: tuple[int, int]) -
     Returns:
         The resulting tensor network after contraction.
     """
-    assert network.num_tensors > pair[0] and network.num_tensors > pair[1], (
-        "Tensor indices out of range."
-    )
+    assert len(network) > pair[0] and len(network) > pair[1], "Tensor indices out of range."
 
     first_contracted_tensor = network.tensors[pair[0]]
     second_contracted_tensor = network.tensors[pair[1]]

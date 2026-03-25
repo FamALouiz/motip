@@ -181,11 +181,6 @@ class TensorNetwork:
         )
 
     @property
-    def num_tensors(self) -> int:
-        """Number of tensors in the network."""
-        return len(self.tensors)
-
-    @property
     def arrays(self) -> list[ndarray]:
         """Arrays in the tensor network."""
         if self.tensor_arrays is None:
@@ -207,3 +202,7 @@ class TensorNetwork:
                 (a1 == a2).all() for a1, a2 in zip(self.tensor_arrays or [], other[-1] or [])
             )
         return NotImplemented
+
+    def __len__(self) -> int:
+        """Get the number of tensors in the network."""
+        return len(self.tensors)

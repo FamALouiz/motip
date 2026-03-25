@@ -37,7 +37,7 @@ class TestRandomTNGeneration:
         assert len(tn.input_indices) == num_tensors
         assert len(tn.output_indices) == num_output_indices
         assert final_network.output_indices == tn.output_indices
-        assert final_network.num_tensors == 1
+        assert len(final_network) == 1
         assert len(final_network.tensors[0].input_indices) == num_output_indices
         assert all(isinstance(size, int) and size > 0 for size in tn.size_dict.values())
         assert all(isinstance(shape, tuple) for shape in tn.shapes)

@@ -121,7 +121,7 @@ class TestTensorNetwork:
             tensor_arrays=[random_tensor_1, random_tensor_2],
         )
 
-        assert network.num_tensors == 2
+        assert len(network) == 2
         assert network.input_indices == [[0, 1], [1, 2]]
         assert network.output_indices == [0]
         assert network.shapes == [(3, 4), (4, 5)]
