@@ -1,13 +1,12 @@
 """Tensor permutation module."""
 
-from typing import Sequence
-
 import numpy as np
 
+from permutation import Permutation
 from tensor import Tensor
 
 
-def permute_tensor(tensor: Tensor, permutation: Sequence[int]) -> Tensor:
+def permute_tensor(tensor: Tensor, permutation: Permutation) -> Tensor:
     """Permute the indices of a tensor.
 
     This function will permute the indices of a tensor in a way that is consistent with the
@@ -37,3 +36,13 @@ def permute_tensor(tensor: Tensor, permutation: Sequence[int]) -> Tensor:
         shape=tuple(tensor.shape[i] for i in permutation),
         array=np.transpose(tensor.array, axes=permutation) if tensor.array is not None else None,
     )
+
+
+def to_permutation(current_indices: list[int], desired_layout: list[int]) -> Permutation:
+    """Convert desired index layout to a permutation over current indices."""
+    if len(desired_layout) != len(current_indices):
+        raise ValueError(
+            "Desired layout must contain exactly the same number of indices as current layout. "
+            f"Got {len(desired_layout)} desired vs {len(current_indices)} current."
+        )
+    return tuple(current_indices.index(idx) for idx in desired_layout)
