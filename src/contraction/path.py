@@ -32,11 +32,11 @@ class ContractionPathWithHistory:
         """Create contraction history by simulating all contractions in order."""
         path = list(contraction_path)
         current_network = deepcopy(network)
-        history = [deepcopy(current_network)]
+        history = [current_network]
 
         for pair in path:
             current_network = contract_tensors_in_network(current_network, pair)
-            history.append(deepcopy(current_network))
+            history.append(current_network)
 
         return cls(path=path, history=history)
 

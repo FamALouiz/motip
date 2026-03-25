@@ -1,18 +1,96 @@
 """Tensor network data structure."""
 
 from dataclasses import dataclass
-from typing import override
+from typing import Iterator, Optional, override
 
 from numpy import ndarray
 
 from tensor import Tensor
 
 
+class _TensorPool:
+    """Pool of tensors for reuse during contraction to minimize memory allocations."""
+
+    def __init__(self, tensors: Optional[list[Tensor]]) -> None:
+        """Initialize an empty tensor pool."""
+        self.__pool: list[Tensor] = []
+
+        if tensors is not None:
+            for tensor in tensors:
+                self.release(tensor)
+
+    @property
+    def pool(self) -> list[Tensor]:
+        """Get the list of tensors currently in the pool."""
+        return self.__pool
+
+    def get_tensor_by_shape(self, shape: tuple[int, ...]) -> Tensor:
+        """Get the first tensor from the pool by shape.
+
+        Args:
+            shape: The desired shape of the tensor to retrieve.
+
+        Returns:
+            A tensor from the pool that matches the requested shape.
+
+        Raises:
+            ValueError: If no tensor of the requested shape is available in the pool.
+        """
+        for i, tensor in enumerate(self.__pool):
+            if tensor.shape == shape:
+                return self.__pool.pop(i)
+        raise ValueError(f"No tensor of shape {shape} available in the pool.")
+
+    def pop(self, idx: int) -> Tensor:
+        """Pop a tensor from the pool."""
+        if len(self.__pool) == 0:
+            raise ValueError("No tensors available in the pool to pop.")
+        return self.__pool.pop(idx)
+
+    def release(self, tensor: Tensor) -> None:
+        """Release a tensor to the pool for future reuse."""
+        self.__pool.append(tensor)
+
+    def insert(self, idx: int, tensor: Tensor) -> None:
+        """Insert a tensor back into the pool at a specific index."""
+        self.__pool.insert(idx, tensor)
+
+    def __getitem__(self, index: int) -> Tensor:
+        """Get a tensor at the specified index from the pool."""
+        return self.__pool[index]
+
+    def __len__(self) -> int:
+        """Get the number of tensors currently in the pool."""
+        return len(self.__pool)
+
+    def __iter__(self) -> Iterator[Tensor]:
+        """Iterate over the tensors in the pool."""
+        return iter(self.__pool)
+
+    def __setitem__(self, index: int, tensor: Tensor) -> None:
+        """Set a tensor at the specified index in the pool."""
+        self.__pool[index].array = tensor.array
+        self.__pool[index].input_indices = tensor.input_indices
+        self.__pool[index].shape = tensor.shape
+
+    def __eq__(self, other: object) -> bool:
+        """Equality comparison for TensorPool."""
+        if isinstance(other, _TensorPool):
+            return all(t1 == t2 for t1, t2 in zip(self.__pool, other.pool))
+        elif isinstance(other, list):
+            assert all(isinstance(t, Tensor) for t in other), (
+                "All elements of the list must be Tensor instances."
+            )
+            return all(t1 == t2 for t1, t2 in zip(self.__pool, other))
+        else:
+            return NotImplemented
+
+
 @dataclass(init=False)
 class TensorNetwork:
     """Tensor network data structure."""
 
-    tensors: list[Tensor]
+    tensors: _TensorPool
     output_indices: list[int]
     size_dict: dict[int, int]
 
@@ -31,7 +109,7 @@ class TensorNetwork:
         self.size_dict = size_dict
 
         if tensors is not None:
-            self.tensors = tensors
+            self.tensors = _TensorPool(tensors)
             self.__post_init__()
             return
 
@@ -51,12 +129,14 @@ class TensorNetwork:
             arrays.extend(tensor_arrays)
         else:
             arrays.extend([None] * len(input_indices))
-        self.tensors = [
-            Tensor(tensor_input_indices, shape, array)
-            for tensor_input_indices, shape, array in zip(
-                input_indices, shapes, arrays, strict=True
-            )
-        ]
+        self.tensors = _TensorPool(
+            [
+                Tensor(tensor_input_indices, shape, array)
+                for tensor_input_indices, shape, array in zip(
+                    input_indices, shapes, arrays, strict=True
+                )
+            ]
+        )
         self.__post_init__()
 
     def __post_init__(self) -> None:

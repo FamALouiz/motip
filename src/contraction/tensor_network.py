@@ -20,15 +20,16 @@ def contract_tensors_in_network(network: TensorNetwork, pair: tuple[int, int]) -
         "Tensor indices out of range."
     )
 
-    new_tensor_network = deepcopy(network)
     first_contracted_tensor = network.tensors[pair[0]]
     second_contracted_tensor = network.tensors[pair[1]]
 
-    for idx in sorted(pair, reverse=True):
-        new_tensor_network.tensors.pop(idx)
-
     new_tensor = contract_tensors(first_contracted_tensor, second_contracted_tensor)
 
+    new_tensor_network = TensorNetwork(
+        tensors=[t for i, t in enumerate(network.tensors) if i not in pair],
+        output_indices=network.output_indices,
+        size_dict=network.size_dict,
+    )
     new_tensor_network.tensors.insert(pair[0], new_tensor)
 
     return new_tensor_network
