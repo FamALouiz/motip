@@ -4,7 +4,7 @@ from typing import override
 
 from contraction.path import ContractionPath, PersistentContractionPath
 from contraction.tensor import get_contracted_indices
-from contraction.tree import PersistentContractionTree, PersistentContractionTreeNode
+from contraction.tree import ContractionTree, ContractionTreeNode
 from memory.utils import get_largest_intermediate_tensor_in_contraction_path
 from permutation.strategy import IPermutationStrategy
 from permutation.tensor import to_permutation
@@ -35,7 +35,7 @@ def _get_step_tensors(
 def _get_node_tensor(
     network: TensorNetwork,
     persistent_path: PersistentContractionPath,
-    node: PersistentContractionTreeNode,
+    node: ContractionTreeNode,
 ) -> Tensor:
     """Get the tensor represented by a contraction-tree node."""
     initial_pos = node.initial_tensor_position
@@ -103,10 +103,10 @@ def _select_slice_indices_for_interleaving(
     return sliced
 
 
-def _node_walk(root: PersistentContractionTreeNode) -> list[PersistentContractionTreeNode]:
+def _node_walk(root: ContractionTreeNode) -> list[ContractionTreeNode]:
     """Return all nodes in the contraction tree using DFS order."""
     stack = [root]
-    nodes: list[PersistentContractionTreeNode] = []
+    nodes: list[ContractionTreeNode] = []
     while stack:
         node = stack.pop()
         nodes.append(node)
@@ -120,9 +120,9 @@ def _node_walk(root: PersistentContractionTreeNode) -> list[PersistentContractio
 
 
 def _find_peak_target_layout(
-    tree: PersistentContractionTree,
+    tree: ContractionTree,
     persistent_path: PersistentContractionPath,
-    peak_node: PersistentContractionTreeNode,
+    peak_node: ContractionTreeNode,
     size_dict: dict[int, int],
 ) -> list[int]:
     """Infer the target layout for the peak tensor using its ancestor contraction.
@@ -202,7 +202,7 @@ class GreedyPermutationStrategy(IPermutationStrategy):
                 - The second list contains the optimal permutations for the intermediate tensors
         """
         persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
-        contraction_tree = PersistentContractionTree.from_contraction_path(persistent_path)
+        contraction_tree = ContractionTree.from_contraction_path(persistent_path)
 
         initial_permutations: list[tuple[int, ...]] = [
             tuple(range(len(tensor.input_indices))) for tensor in network.tensors
@@ -213,8 +213,8 @@ class GreedyPermutationStrategy(IPermutationStrategy):
             _, _, result_tensor = _get_step_tensors(persistent_path, step)
             intermediate_permutations.append(tuple(range(len(result_tensor.input_indices))))
 
-        step_to_node: dict[int, PersistentContractionTreeNode] = {}
-        leaf_to_node: dict[int, PersistentContractionTreeNode] = {}
+        step_to_node: dict[int, ContractionTreeNode] = {}
+        leaf_to_node: dict[int, ContractionTreeNode] = {}
         for node in _node_walk(contraction_tree.root):
             contraction_step = node.contraction_step
             leaf_pos = node.initial_tensor_position
@@ -245,9 +245,7 @@ class GreedyPermutationStrategy(IPermutationStrategy):
             )
         }
 
-        def __set_node_layout(
-            node: PersistentContractionTreeNode, target_layout: list[int]
-        ) -> None:
+        def __set_node_layout(node: ContractionTreeNode, target_layout: list[int]) -> None:
             """Store permutation for a node tensor and remember desired layout for recursion."""
             current_tensor = _get_node_tensor(
                 network,
@@ -267,7 +265,7 @@ class GreedyPermutationStrategy(IPermutationStrategy):
             intermediate_permutations[step] = permutation
             desired_layout_by_node_id[id(node)] = target_layout
 
-        def __plan_node(node: PersistentContractionTreeNode) -> None:
+        def __plan_node(node: ContractionTreeNode) -> None:
             """Recursively plan GEMM-friendly layouts across the full contraction tree."""
             left_node = node.left
             right_node = node.right

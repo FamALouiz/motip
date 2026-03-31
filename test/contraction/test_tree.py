@@ -3,7 +3,7 @@
 import pytest
 
 from contraction.path import PersistentContractionPath
-from contraction.tree import PersistentContractionTree
+from contraction.tree import ContractionTree
 from tensor_network import TensorNetwork
 
 
@@ -19,7 +19,7 @@ def example_network() -> TensorNetwork:
     )
 
 
-class TestPersistentContractionTree:
+class TestContractionTree:
     """Test contraction-tree creation from persistent contraction paths."""
 
     def test_from_contraction_path_builds_binary_tree(self, example_network: TensorNetwork) -> None:
@@ -28,7 +28,7 @@ class TestPersistentContractionTree:
             example_network, [(0, 1), (0, 1)]
         )
 
-        tree = PersistentContractionTree.from_contraction_path(persistent_path)
+        tree = ContractionTree.from_contraction_path(persistent_path)
         left_branch = tree.final_output.left
         right_leaf = tree.final_output.right
 
@@ -63,7 +63,7 @@ class TestPersistentContractionTree:
             ValueError,
             match="requires a complete path ending in exactly one tensor",
         ):
-            PersistentContractionTree.from_contraction_path(persistent_path)
+            ContractionTree.from_contraction_path(persistent_path)
 
     def test_from_contraction_path_rejects_invalid_pair_indices(
         self, example_network: TensorNetwork
@@ -88,4 +88,4 @@ class TestPersistentContractionTree:
             ValueError,
             match="Contraction indices are out of range for current step",
         ):
-            PersistentContractionTree.from_contraction_path(invalid_persistent_path)
+            ContractionTree.from_contraction_path(invalid_persistent_path)

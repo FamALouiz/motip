@@ -9,16 +9,16 @@ from contraction.path import ContractionPath, PersistentContractionPath
 
 
 @dataclass(slots=True)
-class PersistentContractionTreeNode:
+class ContractionTreeNode:
     """Immutable node in a binary contraction tree.
 
     Leaf nodes represent original tensors by their position in the initial network.
     Internal nodes represent contraction operations between two children.
     """
 
-    left: PersistentContractionTreeNode | None = None
-    right: PersistentContractionTreeNode | None = None
-    parent: PersistentContractionTreeNode | None = None
+    left: ContractionTreeNode | None = None
+    right: ContractionTreeNode | None = None
+    parent: ContractionTreeNode | None = None
     initial_tensor_position: int | None = None
     contraction_step: int | None = None
 
@@ -51,10 +51,10 @@ class PersistentContractionTreeNode:
 
 
 @dataclass
-class PersistentContractionTree:
-    """Persistent binary tree that mirrors contraction operations in a path."""
+class ContractionTree:
+    """Binary tree that mirrors contraction operations in a path."""
 
-    root: PersistentContractionTreeNode
+    root: ContractionTreeNode
     path: ContractionPath
     num_leaves: int
 
@@ -64,7 +64,7 @@ class PersistentContractionTree:
         return len(self.path)
 
     @property
-    def final_output(self) -> PersistentContractionTreeNode:
+    def final_output(self) -> ContractionTreeNode:
         """The final contraction output node (root)."""
         return self.root
 
@@ -72,17 +72,17 @@ class PersistentContractionTree:
     @staticmethod
     def from_contraction_path(
         path: ContractionPath,
-    ) -> "PersistentContractionTree": ...
+    ) -> "ContractionTree": ...
     @overload
     @staticmethod
     def from_contraction_path(
         path: PersistentContractionPath,
-    ) -> "PersistentContractionTree": ...
+    ) -> "ContractionTree": ...
     @staticmethod
     def from_contraction_path(
         path: PersistentContractionPath | ContractionPath,
-    ) -> "PersistentContractionTree":
-        """Build a persistent binary contraction tree from a persistent path.
+    ) -> "ContractionTree":
+        """Build a binary contraction tree from a persistent path.
 
         The tree follows the same index semantics as `contract_tensors_in_network`:
         at each step `(i, j)`, tensors at positions `i` and `j` are contracted and
@@ -107,7 +107,7 @@ class PersistentContractionTree:
             )
 
         active_nodes = [
-            PersistentContractionTreeNode(initial_tensor_position=index)
+            ContractionTreeNode(initial_tensor_position=index)
             for index in range(initial_tensor_count)
         ]
 
@@ -125,7 +125,7 @@ class PersistentContractionTree:
             if left_index >= len(active_nodes) or right_index >= len(active_nodes):
                 raise ValueError("Contraction indices are out of range for current step.")
 
-            parent = PersistentContractionTreeNode(
+            parent = ContractionTreeNode(
                 left=active_nodes[left_index],
                 right=active_nodes[right_index],
                 contraction_step=step,
@@ -145,7 +145,7 @@ class PersistentContractionTree:
         if len(active_nodes) != 1:
             raise ValueError("Contraction path did not collapse to a single output tensor.")
 
-        return PersistentContractionTree(
+        return ContractionTree(
             root=active_nodes[0],
             path=tuple(path.path),
             num_leaves=initial_tensor_count,
