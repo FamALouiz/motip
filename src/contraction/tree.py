@@ -9,16 +9,16 @@ from contraction.path import ContractionPath, PersistentContractionPath
 
 
 @dataclass(slots=True)
-class _PersistentContractionTreeNode:
+class PersistentContractionTreeNode:
     """Immutable node in a binary contraction tree.
 
     Leaf nodes represent original tensors by their position in the initial network.
     Internal nodes represent contraction operations between two children.
     """
 
-    left: _PersistentContractionTreeNode | None = None
-    right: _PersistentContractionTreeNode | None = None
-    parent: _PersistentContractionTreeNode | None = None
+    left: PersistentContractionTreeNode | None = None
+    right: PersistentContractionTreeNode | None = None
+    parent: PersistentContractionTreeNode | None = None
     initial_tensor_position: int | None = None
     contraction_step: int | None = None
 
@@ -54,7 +54,7 @@ class _PersistentContractionTreeNode:
 class PersistentContractionTree:
     """Persistent binary tree that mirrors contraction operations in a path."""
 
-    root: _PersistentContractionTreeNode
+    root: PersistentContractionTreeNode
     path: ContractionPath
     num_leaves: int
 
@@ -64,7 +64,7 @@ class PersistentContractionTree:
         return len(self.path)
 
     @property
-    def final_output(self) -> _PersistentContractionTreeNode:
+    def final_output(self) -> PersistentContractionTreeNode:
         """The final contraction output node (root)."""
         return self.root
 
@@ -107,7 +107,7 @@ class PersistentContractionTree:
             )
 
         active_nodes = [
-            _PersistentContractionTreeNode(initial_tensor_position=index)
+            PersistentContractionTreeNode(initial_tensor_position=index)
             for index in range(initial_tensor_count)
         ]
 
@@ -125,7 +125,7 @@ class PersistentContractionTree:
             if left_index >= len(active_nodes) or right_index >= len(active_nodes):
                 raise ValueError("Contraction indices are out of range for current step.")
 
-            parent = _PersistentContractionTreeNode(
+            parent = PersistentContractionTreeNode(
                 left=active_nodes[left_index],
                 right=active_nodes[right_index],
                 contraction_step=step,

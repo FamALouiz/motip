@@ -86,3 +86,16 @@ class TestPersistentContractionTree:
             match="Contraction indices are out of range for current step",
         ):
             PersistentContractionTree.from_contraction_path(invalid_persistent_path)
+
+    def test_history_shares_uncontracted_tensor_nodes_references_between_steps(self) -> None:
+        """Tree nodes for uncontracted tensors should be shared across steps."""
+        persistent_path = PersistentContractionPath.from_contraction_path(
+            self._example_network(), [(0, 1), (0, 1)]
+        )
+        tree = PersistentContractionTree.from_contraction_path(persistent_path)
+
+        # The leaf node for tensor 2 should be the same object in both steps
+        leaf_node_step_0 = tree.final_output.left.right
+        leaf_node_step_1 = tree.final_output.right
+
+        assert leaf_node_step_0 is leaf_node_step_1
