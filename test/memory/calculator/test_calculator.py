@@ -10,6 +10,7 @@ from memory import Memory
 from memory.calculator import MemoryCalculator
 from tensor import Tensor
 from tensor_network import TensorNetwork
+from tensor_network.tn import _TensorPool
 
 
 @pytest.fixture(params=[1, 4, 8])
@@ -100,3 +101,40 @@ class TestMemoryCalculatorTensorMemory:
 
         expected_memory = Memory(4 * 3 * element_size)  # element size * num elements
         assert memory == expected_memory
+
+    def test_calculate_memory_for_tensor_with_zero_elements(self, element_size: int) -> None:
+        """Test memory calculation for a tensor with zero elements."""
+        calculator = MemoryCalculator().set_element_size(element_size)
+        tensor = Tensor(input_indices=[0], shape=(0,), array=None)
+
+        memory = calculator.calculate_memory_for_tensor(tensor)
+
+        assert memory == Memory(0)
+
+    @pytest.mark.parametrize(
+        "tensors",
+        (
+            [
+                Tensor(input_indices=[0, 1], shape=(3, 4), array=None),
+                Tensor(input_indices=[2], shape=(5,), array=None),
+            ],
+            _TensorPool(
+                [
+                    Tensor(input_indices=[0, 1], shape=(3, 4), array=None),
+                    Tensor(input_indices=[2], shape=(5,), array=None),
+                ]
+            ),
+        ),
+    )
+    def test_calculate_memory_for_tensors(
+        self, tensors: list[Tensor] | _TensorPool, element_size: int
+    ) -> None:
+        """Test memory calculation for a list of tensors."""
+        calculator = MemoryCalculator().set_element_size(element_size)
+
+        total_memory = calculator.calculate_memory_for_tensors(tensors)
+
+        expected_memory = Memory(
+            4 * 3 * element_size + 5 * element_size
+        )  # sum of individual tensor memories
+        assert total_memory == expected_memory

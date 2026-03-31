@@ -1,9 +1,11 @@
 """Memory calculator for the motip package."""
 
 import math
+from typing import overload
 
 from memory.memory import Memory
 from tensor import Tensor
+from tensor_network.tn import _TensorPool
 
 
 class MemoryCalculator:
@@ -45,3 +47,14 @@ class MemoryCalculator:
         """Calculate the memory requirements for a single tensor."""
         num_elements = math.prod(tensor.shape)
         return self.__element_size_in_bytes * num_elements
+
+    @overload
+    def calculate_memory_for_tensors(self, tensors: list[Tensor]) -> Memory: ...
+    @overload
+    def calculate_memory_for_tensors(self, tensors: _TensorPool) -> Memory: ...
+    def calculate_memory_for_tensors(self, tensors: list[Tensor] | _TensorPool) -> Memory:
+        """Calculate the total memory requirements for a list of tensors."""
+        total_memory = Memory(0)
+        for tensor in tensors:
+            total_memory += self.calculate_memory_for_tensor(tensor)
+        return total_memory
