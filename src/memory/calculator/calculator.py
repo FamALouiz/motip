@@ -3,6 +3,7 @@
 import math
 from typing import overload
 
+from contraction.tensor import get_contracted_indices
 from memory.memory import Memory
 from tensor import Tensor
 from tensor_network.tn import _TensorPool
@@ -58,3 +59,14 @@ class MemoryCalculator:
         for tensor in tensors:
             total_memory += self.calculate_memory_for_tensor(tensor)
         return total_memory
+
+    def calculate_memory_for_contraction(self, tensor_a: Tensor, tensor_b: Tensor) -> Memory:
+        """Calculate the memory requirements for contracting two tensors."""
+        contracted_indices = get_contracted_indices(tensor_a, tensor_b)
+        free_indices_a = set(tensor_a.input_indices) - contracted_indices
+        free_indices_b = set(tensor_b.input_indices) - contracted_indices
+        shape_a = [tensor_a.shape[tensor_a.input_indices.index(idx)] for idx in free_indices_a]
+        shape_b = [tensor_b.shape[tensor_b.input_indices.index(idx)] for idx in free_indices_b]
+        result_shape = tuple(shape_a + shape_b)
+        num_elements = math.prod(result_shape)
+        return self.__element_size_in_bytes * num_elements

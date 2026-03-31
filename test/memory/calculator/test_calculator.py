@@ -138,3 +138,25 @@ class TestMemoryCalculatorTensorMemory:
             4 * 3 * element_size + 5 * element_size
         )  # sum of individual tensor memories
         assert total_memory == expected_memory
+
+    def test_calculate_memory_for_contraction(self, element_size: int) -> None:
+        """Test memory calculation for contracting two tensors."""
+        calculator = MemoryCalculator().set_element_size(element_size)
+        tensor_a = Tensor(input_indices=[0, 1], shape=(3, 4), array=None)
+        tensor_b = Tensor(input_indices=[1, 2], shape=(4, 5), array=None)
+
+        contraction_memory = calculator.calculate_memory_for_contraction(tensor_a, tensor_b)
+
+        expected_memory = Memory(3 * 5 * element_size)  # memory of the resulting tensor
+        assert contraction_memory == expected_memory
+
+    def test_memory_for_contraction_with_no_contracted_indices(self, element_size: int) -> None:
+        """Test memory calculation for contracting tensors with no shared indices."""
+        calculator = MemoryCalculator().set_element_size(element_size)
+        tensor_a = Tensor(input_indices=[0], shape=(3,), array=None)
+        tensor_b = Tensor(input_indices=[1], shape=(4,), array=None)
+
+        contraction_memory = calculator.calculate_memory_for_contraction(tensor_a, tensor_b)
+
+        expected_memory = Memory(3 * 4 * element_size)  # memory of the resulting tensor
+        assert contraction_memory == expected_memory
