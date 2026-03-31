@@ -5,6 +5,8 @@ from typing import override
 from contraction.path import ContractionPath, PersistentContractionPath
 from contraction.tensor import get_contracted_indices
 from contraction.tree import ContractionTree, ContractionTreeNode
+from memory.calculator.calculator import MemoryCalculator
+from memory.memory import Memory
 from memory.utils import get_largest_intermediate_tensor_in_contraction_path
 from permutation import Permutation
 from permutation.strategy import IPermutationStrategy
@@ -365,3 +367,74 @@ class GreedyPermutationStrategy(IPermutationStrategy):
         __plan_node(contraction_tree.root)
 
         return initial_permutations, intermediate_permutations
+
+    @staticmethod
+    def __calculate_memory_for_path(
+        network: TensorNetwork,
+        contraction_path: ContractionPath,
+        peak: bool = True,
+    ) -> Memory:
+        """Calculate memory usage for a contraction path.
+
+        Args:
+            network: The tensor network.
+            contraction_path: The contraction path.
+            peak: If True, return peak memory; if False, return total memory.
+
+        Returns:
+            Memory usage based on peak or total calculation.
+        """
+        memory_calculator = MemoryCalculator()
+        current_memory = memory_calculator.calculate_memory_for_tensors(network.tensors)
+        persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
+        _, largest_memory = get_largest_intermediate_tensor_in_contraction_path(
+            network,
+            contraction_path,
+        )
+        result_memory = current_memory
+
+        for idx, contraction_pair in enumerate(contraction_path):
+            tensor_a, tensor_b = (
+                persistent_path.get_state(idx).tensors[contraction_pair[0]],
+                persistent_path.get_state(idx).tensors[contraction_pair[1]],
+            )
+            tensor_a_memory = memory_calculator.calculate_memory_for_tensor(tensor_a)
+            tensor_b_memory = memory_calculator.calculate_memory_for_tensor(tensor_b)
+            current_memory += tensor_a_memory + tensor_b_memory
+
+            if tensor_a_memory >= largest_memory or tensor_b_memory >= largest_memory:
+                current_memory -= max(tensor_a_memory, tensor_b_memory)  # The largest intermediate
+                # tensor will not be permuted
+
+            if peak:
+                result_memory = max(result_memory, current_memory)
+
+            current_memory -= (
+                tensor_a_memory + tensor_b_memory
+            )  # Remove the original forms of the permuted tensors
+            contraction_memory = memory_calculator.calculate_memory_for_contraction(
+                tensor_a, tensor_b
+            )
+            current_memory += contraction_memory
+            if peak:
+                result_memory = max(result_memory, current_memory)
+            else:
+                result_memory += tensor_a_memory + tensor_b_memory + contraction_memory
+
+        return result_memory
+
+    @staticmethod
+    @override
+    def get_peak_memory(network: TensorNetwork, contraction_path: ContractionPath) -> Memory:
+        """Calculate the peak memory usage for a given contraction path and tensor permutations."""
+        return GreedyPermutationStrategy.__calculate_memory_for_path(
+            network, contraction_path, peak=True
+        )
+
+    @staticmethod
+    @override
+    def get_total_memory(network: TensorNetwork, contraction_path: ContractionPath) -> Memory:
+        """Calculate the total memory movement for a contraction path and tensor permutations."""
+        return GreedyPermutationStrategy.__calculate_memory_for_path(
+            network, contraction_path, peak=False
+        )
