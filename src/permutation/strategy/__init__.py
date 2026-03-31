@@ -3,6 +3,7 @@
 from typing import Protocol, runtime_checkable
 
 from contraction.path import ContractionPath
+from memory.memory import Memory
 from permutation import Permutation
 from tensor_network.tn import TensorNetwork
 
@@ -27,4 +28,14 @@ class IPermutationStrategy(Protocol):
                 - A list of optimal tensor index permutations for each intermediate tensor in the
             contraction path
         """
+        ...
+
+    @staticmethod
+    def get_peak_memory(network: TensorNetwork, contraction_path: ContractionPath) -> Memory:
+        """Calculate the peak memory usage for a given contraction path and tensor permutations."""
+        ...
+
+    @staticmethod
+    def get_total_memory(network: TensorNetwork, contraction_path: ContractionPath) -> Memory:
+        """Calculate the total memory movement for a contraction path and tensor permutations."""
         ...
