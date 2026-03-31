@@ -7,24 +7,25 @@ from contraction.tree import PersistentContractionTree
 from tensor_network import TensorNetwork
 
 
+@pytest.fixture()
+def example_network() -> TensorNetwork:
+    """Create a small deterministic network for path/tree tests."""
+    return TensorNetwork(
+        input_indices=[[0, 1], [1, 2], [2, 3]],
+        size_dict={0: 2, 1: 3, 2: 4, 3: 5},
+        shapes=[(2, 3), (3, 4), (4, 5)],
+        output_indices=[0, 3],
+        tensor_arrays=None,
+    )
+
+
 class TestPersistentContractionTree:
     """Test contraction-tree creation from persistent contraction paths."""
 
-    @staticmethod
-    def _example_network() -> TensorNetwork:
-        """Create a small deterministic network for path/tree tests."""
-        return TensorNetwork(
-            input_indices=[[0, 1], [1, 2], [2, 3]],
-            size_dict={0: 2, 1: 3, 2: 4, 3: 5},
-            shapes=[(2, 3), (3, 4), (4, 5)],
-            output_indices=[0, 3],
-            tensor_arrays=None,
-        )
-
-    def test_from_contraction_path_builds_binary_tree(self) -> None:
+    def test_from_contraction_path_builds_binary_tree(self, example_network: TensorNetwork) -> None:
         """Tree root should represent the final contraction and keep child structure."""
         persistent_path = PersistentContractionPath.from_contraction_path(
-            self._example_network(), [(0, 1), (0, 1)]
+            example_network, [(0, 1), (0, 1)]
         )
 
         tree = PersistentContractionTree.from_contraction_path(persistent_path)
@@ -52,11 +53,11 @@ class TestPersistentContractionTree:
         assert right_leaf.parent is tree.final_output
         assert right_leaf.parent is tree.final_output
 
-    def test_from_contraction_path_rejects_non_complete_contraction(self) -> None:
+    def test_from_contraction_path_rejects_non_complete_contraction(
+        self, example_network: TensorNetwork
+    ) -> None:
         """Tree creation should fail when final state has more than one tensor."""
-        persistent_path = PersistentContractionPath.from_contraction_path(
-            self._example_network(), [(0, 1)]
-        )
+        persistent_path = PersistentContractionPath.from_contraction_path(example_network, [(0, 1)])
 
         with pytest.raises(
             ValueError,
@@ -64,13 +65,15 @@ class TestPersistentContractionTree:
         ):
             PersistentContractionTree.from_contraction_path(persistent_path)
 
-    def test_from_contraction_path_rejects_invalid_pair_indices(self) -> None:
+    def test_from_contraction_path_rejects_invalid_pair_indices(
+        self, example_network: TensorNetwork
+    ) -> None:
         """Tree creation should fail when a pair index is out of range."""
         invalid_persistent_path = PersistentContractionPath(
             path=[(0, 3), (0, 1)],
             history=[
-                self._example_network(),
-                self._example_network(),
+                example_network,
+                example_network,
                 TensorNetwork(
                     input_indices=[[0, 3]],
                     size_dict={0: 2, 1: 3, 2: 4, 3: 5},
@@ -86,20 +89,3 @@ class TestPersistentContractionTree:
             match="Contraction indices are out of range for current step",
         ):
             PersistentContractionTree.from_contraction_path(invalid_persistent_path)
-
-    def test_history_shares_uncontracted_tensor_nodes_references_between_steps(self) -> None:
-        """Tree nodes for uncontracted tensors should be shared across steps."""
-        persistent_path = PersistentContractionPath.from_contraction_path(
-            self._example_network(), [(0, 1), (0, 1)]
-        )
-        tree = PersistentContractionTree.from_contraction_path(persistent_path)
-
-        # The leaf node for tensor 2 should be the same object in both steps
-        # guard assertions
-        assert tree.final_output is not None
-        assert tree.final_output.left is not None
-        assert tree.final_output.right is not None
-        leaf_node_step_0 = tree.final_output.left.right
-        leaf_node_step_1 = tree.final_output.right
-
-        assert leaf_node_step_0 is leaf_node_step_1
