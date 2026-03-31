@@ -1,0 +1,113 @@
+"""Local optimal permutation strategy for tensor network contraction."""
+
+from typing import override
+
+from contraction.path import ContractionPath, PersistentContractionPath
+from contraction.tensor import get_contracted_indices
+from contraction.tree import PersistentContractionTree, PersistentContractionTreeNode
+from permutation.strategy import IPermutationStrategy
+from permutation.tensor import to_permutation
+from tensor import Tensor
+from tensor_network.tn import TensorNetwork
+
+
+def _sort_indices_by_size(indices: set[int] | list[int], size_dict: dict[int, int]) -> list[int]:
+    return sorted(indices, key=lambda idx: size_dict[idx])
+
+
+def _get_step_tensors(
+    persistent_path: PersistentContractionPath, step: int
+) -> tuple[Tensor, Tensor, Tensor]:
+    left_pos, right_pos = persistent_path.path[step]
+    before = persistent_path.get_state(step)
+    after = persistent_path.get_state(step + 1)
+    return before.tensors[left_pos], before.tensors[right_pos], after.tensors[left_pos]
+
+
+def _get_optimal_layout_for_tensor(
+    is_left: bool,
+    contraction_step: int,
+    persistent_path: PersistentContractionPath,
+    size_dict: dict[int, int],
+) -> list[int]:
+    left_tensor, right_tensor, _ = _get_step_tensors(persistent_path, contraction_step)
+    tensor_at_step = left_tensor if is_left else right_tensor
+    sibling_tensor = right_tensor if is_left else left_tensor
+
+    contracted = get_contracted_indices(tensor_at_step, sibling_tensor)
+    free = set(tensor_at_step.input_indices) - contracted
+
+    contracted_sorted = _sort_indices_by_size(contracted, size_dict)
+    free_sorted = _sort_indices_by_size(free, size_dict)
+
+    if is_left:
+        return free_sorted + contracted_sorted
+    return contracted_sorted + free_sorted
+
+
+class LocalOptimalPermutationStrategy(IPermutationStrategy):
+    """Local optimal permutation strategy for tensor network contraction.
+
+    This strategy determines the optimal permutation for each intermediate contraction step
+    by sorting the contracted and free indices based on their sizes.
+    """
+
+    @staticmethod
+    @override
+    def find_optimal_permutation(
+        network: TensorNetwork, contraction_path: ContractionPath
+    ) -> tuple[list[tuple[int, ...]], list[tuple[int, ...]]]:
+        persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
+        persistent_tree = PersistentContractionTree.from_contraction_path(persistent_path)
+
+        initial_permutations: list[tuple[int, ...]] = [
+            tuple(range(len(tensor.input_indices))) for tensor in network.tensors
+        ]
+        intermediate_permutations: list[tuple[int, ...]] = []
+
+        leaf_to_node: dict[int, PersistentContractionTreeNode] = {}
+        stack = [persistent_tree.root]
+        while stack:
+            node = stack.pop()
+            if node.initial_tensor_position is not None:
+                leaf_to_node[node.initial_tensor_position] = node
+            if node.left is not None:
+                stack.append(node.left)
+            if node.right is not None:
+                stack.append(node.right)
+
+        for leaf_pos, leaf_node in leaf_to_node.items():
+            if leaf_node.parent is not None and leaf_node.parent.contraction_step is not None:
+                contraction_step = leaf_node.parent.contraction_step
+                is_left = leaf_node.parent.left is leaf_node
+
+                optimal_layout = _get_optimal_layout_for_tensor(
+                    is_left,
+                    contraction_step,
+                    persistent_path,
+                    network.size_dict,
+                )
+
+                permutation = to_permutation(
+                    network.tensors[leaf_pos].input_indices, optimal_layout
+                )
+                initial_permutations[leaf_pos] = permutation
+
+        for step in range(persistent_path.num_steps):
+            left_tensor, right_tensor, result_tensor = _get_step_tensors(persistent_path, step)
+
+            contracted = get_contracted_indices(left_tensor, right_tensor)
+            left_free = set(left_tensor.input_indices) - contracted
+            right_free = set(right_tensor.input_indices) - contracted
+
+            contracted_sorted = _sort_indices_by_size(contracted, network.size_dict)
+            left_free_sorted = _sort_indices_by_size(left_free, network.size_dict)
+            right_free_sorted = _sort_indices_by_size(right_free, network.size_dict)
+
+            result_layout = left_free_sorted + contracted_sorted + right_free_sorted
+            result_layout = [idx for idx in result_layout if idx in result_tensor.input_indices]
+
+            permutation = to_permutation(result_tensor.input_indices, result_layout)
+            intermediate_permutations.append(permutation)
+
+        return initial_permutations, intermediate_permutations
