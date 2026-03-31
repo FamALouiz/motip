@@ -2,132 +2,171 @@
 
 from typing import override
 
-from contraction.path import ContractionPath, ContractionPathWithHistory
+from contraction.path import ContractionPath, PersistentContractionPath
 from contraction.tensor import get_contracted_indices
+from contraction.tree import PersistentContractionTree, PersistentContractionTreeNode
 from memory.utils import get_largest_intermediate_tensor_in_contraction_path
 from permutation.strategy import IPermutationStrategy
+from permutation.tensor import to_permutation
 from tensor import Tensor
 from tensor_network.tn import TensorNetwork
 
 
-def _index_sort_key(network: TensorNetwork, idx: int) -> tuple[int, int]:
-    """Sort by index dimension first, then index id for deterministic ordering."""
-    return (network.size_dict.get(idx, 0), idx)
+def _sort_indices_by_size(indices: set[int] | list[int], size_dict: dict[int, int]) -> list[int]:
+    """Sort indices by their dimension sizes (smallest first)."""
+    return sorted(indices, key=lambda idx: size_dict[idx])
 
 
-def _build_gemm_friendly_output_layout(
-    network: TensorNetwork, tensor_a: Tensor, tensor_b: Tensor, contracted: set[int]
-) -> list[int]:
-    """Build an output layout as [free(A), free(B)] with each block size-sorted."""
-    free_a = [idx for idx in tensor_a.input_indices if idx not in contracted]
-    free_b = [idx for idx in tensor_b.input_indices if idx not in contracted]
-    sorted_free_a = sorted(free_a, key=lambda idx: _index_sort_key(network, idx))
-    sorted_free_b = sorted(free_b, key=lambda idx: _index_sort_key(network, idx))
-    return [*sorted_free_a, *sorted_free_b]
+def _get_step_tensors(
+    persistent_path: PersistentContractionPath, step: int
+) -> tuple[Tensor, Tensor, Tensor]:
+    """Get left, right, and result tensors for a contraction step."""
+    left_pos, right_pos = persistent_path.path[step]
+    before = persistent_path.get_state(step)
+    after = persistent_path.get_state(step + 1)
+
+    return (
+        before.tensors[left_pos],
+        before.tensors[right_pos],
+        after.tensors[left_pos],
+    )
 
 
-def _align_layout_to_target(
-    current_indices: list[int], preferred_layout: list[int], fallback_layout: list[int]
-) -> list[int]:
-    """Align a target layout to available indices while preserving target relative order."""
-    current_set = set(current_indices)
-    preferred_subset = [idx for idx in preferred_layout if idx in current_set]
-    already_placed = set(preferred_subset)
-    fallback_subset = [
-        idx for idx in fallback_layout if idx in current_set and idx not in already_placed
-    ]
-    return [*preferred_subset, *fallback_subset]
+def _get_node_tensor(
+    network: TensorNetwork,
+    persistent_path: PersistentContractionPath,
+    node: PersistentContractionTreeNode,
+) -> Tensor:
+    """Get the tensor represented by a contraction-tree node."""
+    initial_pos = node.initial_tensor_position
+    if initial_pos is not None:
+        return network.tensors[initial_pos]
+
+    contraction_step = node.contraction_step
+    if contraction_step is None:
+        raise ValueError("Internal node must define a contraction step.")
+
+    _, _, result = _get_step_tensors(
+        persistent_path,
+        contraction_step,
+    )
+    return result
 
 
-def _needs_slice_fallback(
-    desired_layout: list[int], a_indices: list[int], b_indices: list[int]
+def _has_left_then_right_free_order(
+    desired_free: list[int], left_free: set[int], right_free: set[int]
 ) -> bool:
-    """Detect if desired output interleaves A/B blocks in a way not realizable by permutation.
+    """Check whether desired free-index order can be realized without output permutation."""
+    seen_right = False
+    for idx in desired_free:
+        if idx in right_free:
+            seen_right = True
+        elif idx in left_free and seen_right:
+            return False
+    return True
 
-    With current contraction semantics, output index order is produced as all surviving indices
-    from tensor A followed by all surviving indices from tensor B.
+
+def _select_slice_indices_for_interleaving(
+    desired_free: list[int], left_free: set[int], right_free: set[int]
+) -> set[int]:
+    """Pick indices to treat as sliced when desired free order is interleaved.
+
+    We keep the longest subsequence matching the representable pattern `L*R*`
+    and mark all remaining indices as sliced.
     """
-    a_set = set(a_indices)
-    b_set = set(b_indices)
-    desired_a = [idx for idx in desired_layout if idx in a_set and idx not in b_set]
-    desired_b = [idx for idx in desired_layout if idx in b_set and idx not in a_set]
-    return desired_layout != [*desired_a, *desired_b]
+    sides = ["L" if idx in left_free else "R" for idx in desired_free]
+    n = len(sides)
+
+    best_keep = -1
+    best_switch = 0
+    prefix_left_counts = [0] * (n + 1)
+    suffix_right_counts = [0] * (n + 1)
+
+    for i in range(n):
+        prefix_left_counts[i + 1] = prefix_left_counts[i] + (1 if sides[i] == "L" else 0)
+
+    for i in range(n - 1, -1, -1):
+        suffix_right_counts[i] = suffix_right_counts[i + 1] + (1 if sides[i] == "R" else 0)
+
+    for switch in range(n + 1):
+        keep = prefix_left_counts[switch] + suffix_right_counts[switch]
+        if keep > best_keep:
+            best_keep = keep
+            best_switch = switch
+
+    sliced: set[int] = set()
+    for i, idx in enumerate(desired_free):
+        keep = (i < best_switch and sides[i] == "L") or (i >= best_switch and sides[i] == "R")
+        if not keep:
+            sliced.add(idx)
+
+    return sliced
 
 
-def _build_slice_first_layout(
-    network: TensorNetwork,
-    desired_layout: list[int],
-    tensor_a: Tensor,
-    tensor_b: Tensor,
-    contracted: set[int],
+def _node_walk(root: PersistentContractionTreeNode) -> list[PersistentContractionTreeNode]:
+    """Return all nodes in the contraction tree using DFS order."""
+    stack = [root]
+    nodes: list[PersistentContractionTreeNode] = []
+    while stack:
+        node = stack.pop()
+        nodes.append(node)
+        left = node.left
+        right = node.right
+        if right is not None:
+            stack.append(right)
+        if left is not None:
+            stack.append(left)
+    return nodes
+
+
+def _find_peak_target_layout(
+    tree: PersistentContractionTree,
+    persistent_path: PersistentContractionPath,
+    peak_node: PersistentContractionTreeNode,
+    size_dict: dict[int, int],
 ) -> list[int]:
-    """Fallback order when strict target layout cannot be achieved by permutation alone.
+    """Infer the target layout for the peak tensor using its ancestor contraction.
 
-    Heuristic:
-    1) Move problematic (interleaving) indices to the front (slice-first), size-sorted.
-    2) Place remaining free indices in GEMM-friendly order [free(A), free(B)], each size-sorted.
+    If the peak is not a leaf/root, we inspect its immediate parent contraction and
+    place free and contracted indices in GEMM-friendly groups.
     """
-    free_a = [idx for idx in tensor_a.input_indices if idx not in contracted]
-    free_b = [idx for idx in tensor_b.input_indices if idx not in contracted]
+    peak_parent = peak_node.parent
+    peak_tensor = _get_node_tensor(
+        persistent_path.initial_state,
+        persistent_path,
+        peak_node,
+    )
 
-    free_a_set = set(free_a)
-    free_b_set = set(free_b)
-    last_a_pos = max((i for i, idx in enumerate(desired_layout) if idx in free_a_set), default=-1)
-    problematic_from_b = [
-        idx for i, idx in enumerate(desired_layout) if idx in free_b_set and i < last_a_pos
-    ]
-    problematic_set = set(problematic_from_b)
-
-    sliced = sorted(problematic_set, key=lambda idx: _index_sort_key(network, idx))
-    remaining_a = [idx for idx in free_a if idx not in problematic_set]
-    remaining_b = [idx for idx in free_b if idx not in problematic_set]
-    sorted_remaining_a = sorted(remaining_a, key=lambda idx: _index_sort_key(network, idx))
-    sorted_remaining_b = sorted(remaining_b, key=lambda idx: _index_sort_key(network, idx))
-
-    return [*sliced, *sorted_remaining_a, *sorted_remaining_b]
-
-
-def _to_permutation(current_indices: list[int], desired_layout: list[int]) -> tuple[int, ...]:
-    """Convert desired index layout to a permutation over current indices."""
-    if len(desired_layout) != len(current_indices):
-        raise ValueError(
-            "Desired layout must contain exactly the same number of indices as current layout. "
-            f"Got {len(desired_layout)} desired vs {len(current_indices)} current."
+    if peak_parent is None:
+        return _sort_indices_by_size(
+            set(peak_tensor.input_indices),
+            size_dict,
         )
-    return tuple(current_indices.index(idx) for idx in desired_layout)
 
+    parent_step = peak_parent.contraction_step
+    if parent_step is None:
+        return _sort_indices_by_size(
+            set(peak_tensor.input_indices),
+            size_dict,
+        )
 
-def _infer_peak_target_layout(
-    network: TensorNetwork,
-    contraction_path: ContractionPath,
-    history: ContractionPathWithHistory,
-    largest_step_idx: int,
-) -> list[int]:
-    """Infer desired layout of the peak intermediate tensor from its next contraction step."""
-    if largest_step_idx < 0:
-        return []
-
-    peak_pair = contraction_path[largest_step_idx]
-    peak_tensor = history.get_state(largest_step_idx + 1).tensors[peak_pair[0]]
-    peak_indices = peak_tensor.input_indices
-
-    if largest_step_idx >= len(contraction_path) - 1:
-        return sorted(peak_indices, key=lambda idx: _index_sort_key(network, idx))
-
-    next_pair = contraction_path[largest_step_idx + 1]
-    next_state_before = history.get_state(largest_step_idx + 1)
-    next_tensor_a = next_state_before.tensors[next_pair[0]]
-    next_tensor_b = next_state_before.tensors[next_pair[1]]
-    next_contracted = get_contracted_indices(next_tensor_a, next_tensor_b)
-    next_base_layout = _build_gemm_friendly_output_layout(
-        network, next_tensor_a, next_tensor_b, next_contracted
+    left_tensor, right_tensor, _ = _get_step_tensors(
+        persistent_path,
+        parent_step,
     )
+    is_left_child = peak_parent.left is peak_node
+    peak_tensor_at_parent = left_tensor if is_left_child else right_tensor
+    sibling_tensor = right_tensor if is_left_child else left_tensor
 
-    return _align_layout_to_target(
-        current_indices=peak_indices,
-        preferred_layout=next_base_layout,
-        fallback_layout=sorted(peak_indices, key=lambda idx: _index_sort_key(network, idx)),
-    )
+    contracted = get_contracted_indices(peak_tensor_at_parent, sibling_tensor)
+    free = set(peak_tensor_at_parent.input_indices) - contracted
+    free_sorted = _sort_indices_by_size(free, size_dict)
+    contracted_sorted = _sort_indices_by_size(contracted, size_dict)
+
+    if is_left_child:
+        return free_sorted + contracted_sorted
+
+    return contracted_sorted + free_sorted
 
 
 class GreedyPermutationStrategy(IPermutationStrategy):
@@ -136,83 +175,194 @@ class GreedyPermutationStrategy(IPermutationStrategy):
     @staticmethod
     @override
     def find_optimal_permutation(
-        network: TensorNetwork, contraction_path: ContractionPath
-    ) -> list[tuple[int, ...]]:
-        """Greedy strategy to find optimal tensor permutations for a contraction path.
+        network: TensorNetwork,
+        contraction_path: ContractionPath,
+        k: int = 1,
+    ) -> tuple[list[tuple[int, ...]], list[tuple[int, ...]]]:
+        """Find optimal initial and intermediate permutations for a contraction path.
 
-        The strategy is peak-memory aware and traverses the contraction path backwards. Steps after
-        the peak are freely optimized for GEMM- and stride-friendly layouts. The peak step itself
-        is kept unpermuted to reduce the need for copying the largest intermediate tensor twice.
-        Steps before the peak are shaped to make the peak tensor naturally emerge in thw desired
-        layout; when a desire layout is not realizable by pure permutation, a slice-first fallback
-        order is used.
+        The greedy strategy identifies the largest k tensors in the contraction path and treats
+        them as "peaks". It then plans permutations to ensure that these peak tensors are in
+        GEMM-friendly layouts, and recursively plans compatible layouts for all other tensors
+        in the contraction tree such that the top k do not need to be permuted.
+
+        Args:
+            network (TensorNetwork): The input tensor network.
+            contraction_path (ContractionPath): The contraction path.
+            k (int, optional): The number of top tensors to freeze. Defaults to 1.
+
+        Raises:
+            ValueError: If an internal node in the contraction tree does not define a contraction
+            step.
+
+        Returns:
+            tuple[list[tuple[int, ...]], list[tuple[int, ...]]]:
+            A tuple containing two lists:
+                - The first list contains the optimal permutations for the initial tensors.
+                - The second list contains the optimal permutations for the intermediate tensors
         """
-        num_steps = len(contraction_path)
-        if num_steps == 0:
-            return []
+        persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
+        contraction_tree = PersistentContractionTree.from_contraction_path(persistent_path)
+
+        initial_permutations: list[tuple[int, ...]] = [
+            tuple(range(len(tensor.input_indices))) for tensor in network.tensors
+        ]
+        intermediate_permutations: list[tuple[int, ...]] = []
+
+        for step in range(persistent_path.num_steps):
+            _, _, result_tensor = _get_step_tensors(persistent_path, step)
+            intermediate_permutations.append(tuple(range(len(result_tensor.input_indices))))
+
+        step_to_node: dict[int, PersistentContractionTreeNode] = {}
+        leaf_to_node: dict[int, PersistentContractionTreeNode] = {}
+        for node in _node_walk(contraction_tree.root):
+            contraction_step = node.contraction_step
+            leaf_pos = node.initial_tensor_position
+            if contraction_step is not None:
+                step_to_node[contraction_step] = node
+            if leaf_pos is not None:
+                leaf_to_node[leaf_pos] = node
 
         largest_step_idx, _ = get_largest_intermediate_tensor_in_contraction_path(
-            network, contraction_path
+            network,
+            contraction_path,
         )
+        if largest_step_idx >= 0:
+            peak_node = step_to_node[largest_step_idx]
+        else:
+            largest_initial_idx = max(
+                range(len(network.tensors)),
+                key=lambda i: max(network.tensors[i].shape) if network.tensors[i].shape else 1,
+            )
+            peak_node = leaf_to_node[largest_initial_idx]
 
-        if largest_step_idx == -1:
-            raise NotImplementedError(
-                "Cannot determine optimal permutation without a valid largest intermediate tensor."
+        desired_layout_by_node_id: dict[int, list[int]] = {
+            id(peak_node): _find_peak_target_layout(
+                contraction_tree,
+                persistent_path,
+                peak_node,
+                network.size_dict,
+            )
+        }
+
+        def __set_node_layout(
+            node: PersistentContractionTreeNode, target_layout: list[int]
+        ) -> None:
+            """Store permutation for a node tensor and remember desired layout for recursion."""
+            current_tensor = _get_node_tensor(
+                network,
+                persistent_path,
+                node,
+            )
+            permutation = to_permutation(current_tensor.input_indices, target_layout)
+
+            leaf_pos = node.initial_tensor_position
+            if leaf_pos is not None:
+                initial_permutations[leaf_pos] = permutation
+                return
+
+            step = node.contraction_step
+            if step is None:
+                raise ValueError("Internal node must define a contraction step.")
+            intermediate_permutations[step] = permutation
+            desired_layout_by_node_id[id(node)] = target_layout
+
+        def __plan_node(node: PersistentContractionTreeNode) -> None:
+            """Recursively plan GEMM-friendly layouts across the full contraction tree."""
+            left_node = node.left
+            right_node = node.right
+            step = node.contraction_step
+
+            if left_node is None or right_node is None or step is None:
+                return
+
+            left_tensor, right_tensor, result_tensor = _get_step_tensors(
+                persistent_path,
+                step,
             )
 
-        history = ContractionPathWithHistory.from_contraction_path(network, contraction_path)
-        permutations: list[tuple[int, ...]] = [tuple()] * num_steps
-
-        peak_target_layout = _infer_peak_target_layout(
-            network, contraction_path, history, largest_step_idx
-        )
-
-        for step in range(num_steps - 1, -1, -1):
-            pair = contraction_path[step]
-            state_before = history.get_state(step)
-            state_after = history.get_state(step + 1)
-
-            tensor_a = state_before.tensors[pair[0]]
-            tensor_b = state_before.tensors[pair[1]]
-            intermediate_tensor = state_after.tensors[pair[0]]
-
-            contracted = get_contracted_indices(tensor_a, tensor_b)
-            base_layout = _build_gemm_friendly_output_layout(
-                network, tensor_a, tensor_b, contracted
+            contracted = get_contracted_indices(left_tensor, right_tensor)
+            left_free = set(left_tensor.input_indices) - contracted
+            right_free = set(right_tensor.input_indices) - contracted
+            contracted_sorted = _sort_indices_by_size(
+                contracted,
+                network.size_dict,
             )
 
-            if step > largest_step_idx:
-                desired_layout = base_layout
-            elif step == largest_step_idx:
-                desired_layout = _align_layout_to_target(
-                    current_indices=intermediate_tensor.input_indices,
-                    preferred_layout=peak_target_layout or base_layout,
-                    fallback_layout=base_layout,
-                )
-                # Keep peak intermediate tensor in-place and instead shape prior contractions.
-                permutations[step] = tuple(range(len(intermediate_tensor.input_indices)))
-                continue
+            desired_layout = desired_layout_by_node_id.get(id(node))
+            desired_free: list[int]
+            if desired_layout is not None:
+                desired_free = [
+                    idx for idx in desired_layout if idx in left_free or idx in right_free
+                ]
             else:
-                desired_layout = _align_layout_to_target(
-                    current_indices=intermediate_tensor.input_indices,
-                    preferred_layout=peak_target_layout,
-                    fallback_layout=base_layout,
+                desired_free = _sort_indices_by_size(
+                    left_free,
+                    network.size_dict,
+                ) + _sort_indices_by_size(
+                    right_free,
+                    network.size_dict,
                 )
 
-                if _needs_slice_fallback(
-                    desired_layout, tensor_a.input_indices, tensor_b.input_indices
-                ):
-                    desired_layout = _build_slice_first_layout(
-                        network=network,
-                        desired_layout=desired_layout,
-                        tensor_a=tensor_a,
-                        tensor_b=tensor_b,
-                        contracted=contracted,
-                    )
+            if _has_left_then_right_free_order(
+                desired_free,
+                left_free,
+                right_free,
+            ):
+                sliced_indices: set[int] = set()
+            else:
+                sliced_indices = _select_slice_indices_for_interleaving(
+                    desired_free,
+                    left_free,
+                    right_free,
+                )
 
-            permutations[step] = _to_permutation(
-                current_indices=intermediate_tensor.input_indices,
-                desired_layout=desired_layout,
+            left_sliced = sliced_indices & left_free
+            right_sliced = sliced_indices & right_free
+            left_remaining = left_free - left_sliced
+            right_remaining = right_free - right_sliced
+
+            left_sliced_sorted = _sort_indices_by_size(
+                left_sliced,
+                network.size_dict,
+            )
+            right_sliced_sorted = _sort_indices_by_size(
+                right_sliced,
+                network.size_dict,
+            )
+            left_remaining_sorted = _sort_indices_by_size(
+                left_remaining,
+                network.size_dict,
+            )
+            right_remaining_sorted = _sort_indices_by_size(
+                right_remaining,
+                network.size_dict,
             )
 
-        return permutations
+            left_target = left_sliced_sorted + left_remaining_sorted + contracted_sorted
+            right_target = contracted_sorted + right_sliced_sorted + right_remaining_sorted
+            result_target = (
+                left_sliced_sorted
+                + left_remaining_sorted
+                + right_sliced_sorted
+                + right_remaining_sorted
+            )
+
+            if id(left_node) != id(peak_node):
+                __set_node_layout(left_node, left_target)
+            if id(right_node) != id(peak_node):
+                __set_node_layout(right_node, right_target)
+
+            if id(node) != id(peak_node):
+                intermediate_permutations[step] = to_permutation(
+                    result_tensor.input_indices,
+                    result_target,
+                )
+                desired_layout_by_node_id[id(node)] = result_target
+
+            __plan_node(left_node)
+            __plan_node(right_node)
+
+        __plan_node(contraction_tree.root)
+
+        return initial_permutations, intermediate_permutations
