@@ -243,7 +243,7 @@ class TestTensorPool:
         assert id(pool[0]) == original_id
         assert pool[0].input_indices == [1, 2]
         assert pool[0].shape == (3, 4)
-        assert (pool[0].array == np.ones((3, 4))).all()
+        assert (pool[0].array == np.ones((3, 4))).all()  # type: ignore
 
     def test_tensor_pool_equality_with_pool_and_list(self) -> None:
         """Test equality behavior for pool-to-pool and pool-to-list comparisons."""

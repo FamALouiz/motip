@@ -95,6 +95,10 @@ class TestPersistentContractionTree:
         tree = PersistentContractionTree.from_contraction_path(persistent_path)
 
         # The leaf node for tensor 2 should be the same object in both steps
+        # guard assertions
+        assert tree.final_output is not None
+        assert tree.final_output.left is not None
+        assert tree.final_output.right is not None
         leaf_node_step_0 = tree.final_output.left.right
         leaf_node_step_1 = tree.final_output.right
 

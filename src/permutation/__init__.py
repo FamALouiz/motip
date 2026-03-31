@@ -1,5 +1,5 @@
 """Permutations module."""
 
-from typing import TypeAlias
+from typing import Sequence, TypeAlias
 
-Permutation: TypeAlias = tuple[int, ...]
+Permutation: TypeAlias = Sequence[int]
