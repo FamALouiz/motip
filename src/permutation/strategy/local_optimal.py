@@ -5,6 +5,7 @@ from typing import override
 from contraction.path import ContractionPath, PersistentContractionPath
 from contraction.tensor import get_contracted_indices
 from contraction.tree import ContractionTree, ContractionTreeNode
+from permutation import Permutation
 from permutation.strategy import IPermutationStrategy
 from permutation.tensor import to_permutation
 from tensor import Tensor
@@ -56,14 +57,14 @@ class LocalOptimalPermutationStrategy(IPermutationStrategy):
     @override
     def find_optimal_permutation(
         network: TensorNetwork, contraction_path: ContractionPath
-    ) -> tuple[list[tuple[int, ...]], list[tuple[int, ...]]]:
+    ) -> tuple[list[Permutation], list[Permutation]]:
         persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
         persistent_tree = ContractionTree.from_contraction_path(persistent_path)
 
-        initial_permutations: list[tuple[int, ...]] = [
+        initial_permutations: list[Permutation] = [
             tuple(range(len(tensor.input_indices))) for tensor in network.tensors
         ]
-        intermediate_permutations: list[tuple[int, ...]] = []
+        intermediate_permutations: list[Permutation] = []
 
         leaf_to_node: dict[int, ContractionTreeNode] = {}
         stack = [persistent_tree.root]

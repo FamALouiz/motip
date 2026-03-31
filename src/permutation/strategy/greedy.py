@@ -6,6 +6,7 @@ from contraction.path import ContractionPath, PersistentContractionPath
 from contraction.tensor import get_contracted_indices
 from contraction.tree import ContractionTree, ContractionTreeNode
 from memory.utils import get_largest_intermediate_tensor_in_contraction_path
+from permutation import Permutation
 from permutation.strategy import IPermutationStrategy
 from permutation.tensor import to_permutation
 from tensor import Tensor
@@ -178,7 +179,7 @@ class GreedyPermutationStrategy(IPermutationStrategy):
         network: TensorNetwork,
         contraction_path: ContractionPath,
         k: int = 1,
-    ) -> tuple[list[tuple[int, ...]], list[tuple[int, ...]]]:
+    ) -> tuple[list[Permutation], list[Permutation]]:
         """Find optimal initial and intermediate permutations for a contraction path.
 
         The greedy strategy identifies the largest k tensors in the contraction path and treats
@@ -196,7 +197,7 @@ class GreedyPermutationStrategy(IPermutationStrategy):
             step.
 
         Returns:
-            tuple[list[tuple[int, ...]], list[tuple[int, ...]]]:
+            tuple[list[Permutation], list[Permutation]]:
             A tuple containing two lists:
                 - The first list contains the optimal permutations for the initial tensors.
                 - The second list contains the optimal permutations for the intermediate tensors
@@ -204,10 +205,10 @@ class GreedyPermutationStrategy(IPermutationStrategy):
         persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
         contraction_tree = ContractionTree.from_contraction_path(persistent_path)
 
-        initial_permutations: list[tuple[int, ...]] = [
+        initial_permutations: list[Permutation] = [
             tuple(range(len(tensor.input_indices))) for tensor in network.tensors
         ]
-        intermediate_permutations: list[tuple[int, ...]] = []
+        intermediate_permutations: list[Permutation] = []
 
         for step in range(persistent_path.num_steps):
             _, _, result_tensor = _get_step_tensors(persistent_path, step)

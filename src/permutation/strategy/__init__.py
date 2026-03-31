@@ -3,6 +3,7 @@
 from typing import Protocol, runtime_checkable
 
 from contraction.path import ContractionPath
+from permutation import Permutation
 from tensor_network.tn import TensorNetwork
 
 
@@ -13,7 +14,7 @@ class IPermutationStrategy(Protocol):
     @staticmethod
     def find_optimal_permutation(
         network: TensorNetwork, contraction_path: ContractionPath
-    ) -> tuple[list[tuple[int, ...]], list[tuple[int, ...]]]:
+    ) -> tuple[list[Permutation], list[Permutation]]:
         """Find the optimal tensor permutation for a given contraction path.
 
         Args:
