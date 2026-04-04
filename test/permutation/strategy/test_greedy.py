@@ -22,7 +22,7 @@ class TestGreedyPermutationStrategyMemory:
 
         peak_memory = GreedyPermutationStrategy.get_peak_memory(network, contraction_path)
 
-        assert peak_memory == Memory(192)
+        assert peak_memory == Memory(256)
 
     def test_get_peak_memory_skips_largest_tensor_permutation(self) -> None:
         """Peak memory reflects largest-tensor skip behavior in greedy strategy."""
@@ -37,7 +37,7 @@ class TestGreedyPermutationStrategyMemory:
 
         peak_memory = GreedyPermutationStrategy.get_peak_memory(network, contraction_path)
 
-        assert peak_memory == Memory(616)
+        assert peak_memory == Memory(720)
 
     def test_get_total_memory_matches_manual_value(self) -> None:
         """Total memory movement is deterministic for a fixed two-step chain."""

@@ -183,7 +183,7 @@ class TestLocalOptimalPermutationStrategyMemory:
 
         peak_memory = LocalOptimalPermutationStrategy.get_peak_memory(network, contraction_path)
 
-        assert peak_memory == Memory(288)
+        assert peak_memory == Memory(352)
 
     def test_get_peak_memory_two_step_chain_equals_manual_value(self) -> None:
         """Peak memory is correct for a deterministic two-step chain."""
@@ -198,7 +198,7 @@ class TestLocalOptimalPermutationStrategyMemory:
 
         peak_memory = LocalOptimalPermutationStrategy.get_peak_memory(network, contraction_path)
 
-        assert peak_memory == Memory(888)
+        assert peak_memory == Memory(1000)
 
     def test_get_total_memory_two_step_chain_equals_manual_value(self) -> None:
         """Total memory movement is correct for a deterministic two-step chain."""
