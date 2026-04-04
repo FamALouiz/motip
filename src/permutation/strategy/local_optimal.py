@@ -135,9 +135,6 @@ class LocalOptimalPermutationStrategy(IPermutationStrategy):
             if peak:
                 result_memory = max(result_memory, current_memory)
 
-            current_memory -= (
-                tensor_a_memory + tensor_b_memory
-            )  # Remove the original forms of the permuted tensors
             contraction_memory = memory_calculator.calculate_memory_for_contraction(
                 tensor_a, tensor_b
             )
@@ -146,6 +143,9 @@ class LocalOptimalPermutationStrategy(IPermutationStrategy):
                 result_memory = max(result_memory, current_memory)
             else:
                 result_memory += tensor_a_memory + tensor_b_memory + contraction_memory
+            current_memory -= (
+                tensor_a_memory + tensor_b_memory
+            )  # Remove the original forms of the permuted tensors
 
         return result_memory
 
