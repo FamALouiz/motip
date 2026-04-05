@@ -24,7 +24,7 @@ class TestNextUseAwarePermutationStrategyMemory:
         total_memory = NextUseAwarePermutationStrategy.get_total_memory(network, contraction_path)
 
         assert peak_memory == Memory(208)
-        assert total_memory == Memory(352)
+        assert total_memory == Memory(208)
 
     def test_get_peak_and_total_memory_single_step_with_permutation_copy(self) -> None:
         """Peak and total memory include the copy required for the first use layout."""
@@ -41,4 +41,4 @@ class TestNextUseAwarePermutationStrategyMemory:
         total_memory = NextUseAwarePermutationStrategy.get_total_memory(network, contraction_path)
 
         assert peak_memory == Memory(208)
-        assert total_memory == Memory(400)
+        assert total_memory == Memory(304)

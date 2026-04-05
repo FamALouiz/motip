@@ -82,16 +82,20 @@ class NextUseAwarePermutationStrategy(IPermutationStrategy):
         return initial_permutations, intermediate_permutations
 
     @staticmethod
-    @override
-    def get_peak_memory(network: TensorNetwork, contraction_path: ContractionPath) -> Memory:
-        """Calculate peak memory usage for the next-use-aware strategy.
+    def __calculate_memory_for_path(
+        network: TensorNetwork,
+        contraction_path: ContractionPath,
+        peak: bool,
+    ) -> Memory:
+        """Calculate peak or total memory for the next-use-aware strategy.
 
         Args:
             network: The tensor network.
             contraction_path: The contraction path.
+            peak: If True, return peak memory; otherwise return total memory movement.
 
         Returns:
-            The peak memory usage.
+            The peak memory usage or total memory movement.
         """
         memory_calculator = MemoryCalculator()
         persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
@@ -100,7 +104,7 @@ class NextUseAwarePermutationStrategy(IPermutationStrategy):
         )
 
         current_memory = memory_calculator.calculate_memory_for_tensors(network.tensors)
-        peak_memory = current_memory
+        result_memory = current_memory if peak else Memory(0)
 
         live_tensor_sources: list[tuple[str, int]] = [
             ("initial", idx) for idx in range(len(network.tensors))
@@ -125,9 +129,12 @@ class NextUseAwarePermutationStrategy(IPermutationStrategy):
                     not initial_tensor_permuted[initial_idx]
                     and initial_permutations[initial_idx] != identity
                 ):
-                    current_memory += left_memory
-                    peak_memory = max(peak_memory, current_memory)
-                    current_memory -= left_memory
+                    if peak:
+                        current_memory += left_memory
+                        result_memory = max(result_memory, current_memory)
+                        current_memory -= left_memory
+                    else:
+                        result_memory += left_memory + left_memory
                     initial_tensor_permuted[initial_idx] = True
 
             if right_source[0] == "initial":
@@ -137,96 +144,54 @@ class NextUseAwarePermutationStrategy(IPermutationStrategy):
                     not initial_tensor_permuted[initial_idx]
                     and initial_permutations[initial_idx] != identity
                 ):
-                    current_memory += right_memory
-                    peak_memory = max(peak_memory, current_memory)
-                    current_memory -= right_memory
+                    if peak:
+                        current_memory += right_memory
+                        result_memory = max(result_memory, current_memory)
+                        current_memory -= right_memory
+                    else:
+                        result_memory += right_memory + right_memory
                     initial_tensor_permuted[initial_idx] = True
 
             result_tensor = persistent_path.get_state(step + 1).tensors[left_pos]
-            result_memory = memory_calculator.calculate_memory_for_tensor(result_tensor)
+            result_tensor_memory = memory_calculator.calculate_memory_for_tensor(result_tensor)
 
-            current_memory += result_memory
-            peak_memory = max(peak_memory, current_memory)
-
-            current_memory -= left_memory + right_memory
+            if peak:
+                current_memory += result_tensor_memory
+                result_memory = max(result_memory, current_memory)
+                current_memory -= left_memory + right_memory
+            else:
+                result_memory += left_memory + right_memory + result_tensor_memory
 
             identity_result = tuple(range(len(result_tensor.input_indices)))
             if intermediate_permutations[step] != identity_result:
-                current_memory += result_memory
-                peak_memory = max(peak_memory, current_memory)
-                current_memory -= result_memory
+                if peak:
+                    current_memory += result_tensor_memory
+                    result_memory = max(result_memory, current_memory)
+                    current_memory -= result_tensor_memory
+                else:
+                    result_memory += result_tensor_memory + result_tensor_memory
 
             live_tensor_sources[left_pos] = ("intermediate", step)
-            del live_tensor_sources[right_pos]
+            live_tensor_sources.pop(right_pos)
 
-        return peak_memory
+        return result_memory
+
+    @staticmethod
+    @override
+    def get_peak_memory(network: TensorNetwork, contraction_path: ContractionPath) -> Memory:
+        """Calculate peak memory usage for the next-use-aware strategy."""
+        return NextUseAwarePermutationStrategy.__calculate_memory_for_path(
+            network,
+            contraction_path,
+            peak=True,
+        )
 
     @staticmethod
     @override
     def get_total_memory(network: TensorNetwork, contraction_path: ContractionPath) -> Memory:
-        """Calculate total memory movement for the next-use-aware strategy.
-
-        Args:
-            network: The tensor network.
-            contraction_path: The contraction path.
-
-        Returns:
-            The total memory movement.
-        """
-        memory_calculator = MemoryCalculator()
-        persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
-        initial_permutations, intermediate_permutations = (
-            NextUseAwarePermutationStrategy.find_optimal_permutation(network, contraction_path)
+        """Calculate total memory movement for the next-use-aware strategy."""
+        return NextUseAwarePermutationStrategy.__calculate_memory_for_path(
+            network,
+            contraction_path,
+            peak=False,
         )
-
-        total_memory = Memory(0)
-
-        live_tensor_sources: list[tuple[str, int]] = [
-            ("initial", idx) for idx in range(len(network.tensors))
-        ]
-        initial_tensor_permuted = [False for _ in network.tensors]
-
-        for step, (left_pos, right_pos) in enumerate(contraction_path):
-            state_before = persistent_path.get_state(step)
-            left_tensor = state_before.tensors[left_pos]
-            right_tensor = state_before.tensors[right_pos]
-
-            left_source = live_tensor_sources[left_pos]
-            right_source = live_tensor_sources[right_pos]
-
-            left_memory = memory_calculator.calculate_memory_for_tensor(left_tensor)
-            right_memory = memory_calculator.calculate_memory_for_tensor(right_tensor)
-
-            if left_source[0] == "initial":
-                initial_idx = left_source[1]
-                identity = tuple(range(len(left_tensor.input_indices)))
-                if (
-                    not initial_tensor_permuted[initial_idx]
-                    and initial_permutations[initial_idx] != identity
-                ):
-                    total_memory += left_memory + left_memory
-                    initial_tensor_permuted[initial_idx] = True
-
-            if right_source[0] == "initial":
-                initial_idx = right_source[1]
-                identity = tuple(range(len(right_tensor.input_indices)))
-                if (
-                    not initial_tensor_permuted[initial_idx]
-                    and initial_permutations[initial_idx] != identity
-                ):
-                    total_memory += right_memory + right_memory
-                    initial_tensor_permuted[initial_idx] = True
-
-            result_tensor = persistent_path.get_state(step + 1).tensors[left_pos]
-            result_memory = memory_calculator.calculate_memory_for_tensor(result_tensor)
-
-            total_memory += left_memory + right_memory + result_memory
-
-            identity_result = tuple(range(len(result_tensor.input_indices)))
-            if intermediate_permutations[step] != identity_result:
-                total_memory += result_memory + result_memory
-
-            live_tensor_sources[left_pos] = ("intermediate", step)
-            del live_tensor_sources[right_pos]
-
-        return total_memory
