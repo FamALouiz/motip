@@ -162,7 +162,7 @@ def run_sweep(args: argparse.Namespace) -> list[dict[str, float | int | str]]:
         f"with average rank {args.average_rank_start}..{args.average_rank_end}\n"
         f"with max dim {args.max_dim_start}..{args.max_dim_end}\n"
         f"with num output indices {args.num_output_indices_start}..{args.num_output_indices_end}\n"
-        f"and strategies {[cls.__name__ for cls in strategies]}"
+        f"and strategies {[cls.__name__ for cls in strategies]}"  # type: ignore[attr-defined]
     )
 
     for size in sizes:
@@ -205,8 +205,8 @@ def run_sweep(args: argparse.Namespace) -> list[dict[str, float | int | str]]:
                                 average_rank,
                                 max_dim,
                                 num_output_indices,
-                                strategy_cls.__name__,
-                            )  # type: ignore[attr-defined]
+                                strategy_cls.__name__,  # type: ignore[attr-defined]
+                            )
                             peak_sums[key] += peak_memory.to_bytes
                             total_sums[key] += total_memory.to_bytes
                             counts[key] += 1
