@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import csv
 import inspect
+import os
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -52,19 +53,37 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--size-start", type=int, default=5, help="Inclusive initial size.")
     parser.add_argument("--size-end", type=int, default=20, help="Inclusive final size.")
     parser.add_argument(
-        "--average-rank",
+        "--average-rank-start",
         type=int,
-        default=4,
-        help="Average tensor rank for generated random tensor networks.",
+        default=3,
+        help="Minimum average tensor rank for generated random tensor networks.",
     )
     parser.add_argument(
-        "--max-dim",
+        "--average-rank-end",
         type=int,
-        default=12,
+        default=3,
+        help="Maximum average tensor rank for generated random tensor networks.",
+    )
+    parser.add_argument(
+        "--max-dim-start",
+        type=int,
+        default=8,
+        help="Minimum maximum dimension size for generated tensor indices.",
+    )
+    parser.add_argument(
+        "--max-dim-end",
+        type=int,
+        default=8,
         help="Maximum dimension size for generated tensor indices.",
     )
     parser.add_argument(
-        "--num-output-indices",
+        "--num-output-indices-start",
+        type=int,
+        default=2,
+        help="Minimum number of output indices in the generated tensor network.",
+    )
+    parser.add_argument(
+        "--num-output-indices-end",
         type=int,
         default=2,
         help="Number of output indices in the generated tensor network.",
@@ -80,6 +99,7 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Display plots interactively in addition to saving them.",
     )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose mode.")
     return parser.parse_args()
 
 
@@ -114,6 +134,12 @@ def validate_ranges(args: argparse.Namespace) -> None:
         raise ValueError("size-start must be <= size-end")
     if args.size_start < 2:
         raise ValueError("size-start must be >= 2")
+    if args.average_rank_start > args.average_rank_end:
+        raise ValueError("average-rank-start must be <= average-rank-end")
+    if args.max_dim_start > args.max_dim_end:
+        raise ValueError("max-dim-start must be <= max-dim-end")
+    if args.num_output_indices_start > args.num_output_indices_end:
+        raise ValueError("num-output-indices-start must be <= num-output-indices-end")
 
 
 def run_sweep(args: argparse.Namespace) -> list[dict[str, float | int | str]]:
@@ -121,60 +147,90 @@ def run_sweep(args: argparse.Namespace) -> list[dict[str, float | int | str]]:
     strategies = get_strategies()
     sizes = range(args.size_start, args.size_end + 1)
     seeds = range(args.seed_start, args.seed_end + 1)
+    average_ranks = range(args.average_rank_start, args.average_rank_end + 1)
+    max_dims = range(args.max_dim_start, args.max_dim_end + 1)
+    num_output_indices_list = range(args.num_output_indices_start, args.num_output_indices_end + 1)
 
-    peak_sums: dict[tuple[int, str], int] = defaultdict(int)
-    total_sums: dict[tuple[int, str], int] = defaultdict(int)
-    counts: dict[tuple[int, str], int] = defaultdict(int)
+    peak_sums: dict[tuple[int, int, int, int, str], int] = defaultdict(int)
+    total_sums: dict[tuple[int, int, int, int, str], int] = defaultdict(int)
+    counts: dict[tuple[int, int, int, int, str], int] = defaultdict(int)
 
     print(f"\n{'=' * 60}")
-    print(f"Sweeping from size {args.size_start} to {args.size_end}")
+    print(
+        f"Sweeping from size {args.size_start} to {args.size_end}\n"
+        f"with seeds {args.seed_start}..{args.seed_end}\n"
+        f"with average rank {args.average_rank_start}..{args.average_rank_end}\n"
+        f"with max dim {args.max_dim_start}..{args.max_dim_end}\n"
+        f"with num output indices {args.num_output_indices_start}..{args.num_output_indices_end}\n"
+        f"and strategies {[cls.__name__ for cls in strategies]}"
+    )
 
     for size in sizes:
-        print(f"\n{'=' * 60}")
-        print(f"Sweeping size {size} with seeds {args.seed_start}..{args.seed_end}")
+        print("Processing size:", size)
         for seed in seeds:
-            tn = generate_random_tn(
-                num_tensors=size,
-                average_rank=args.average_rank,
-                max_dim=args.max_dim,
-                seed=seed,
-                generate_arrays=False,
-                num_output_indices=args.num_output_indices,
-            )
-            contraction_tree = ctg.array_contract_tree(
-                inputs=tn.input_indices,
-                output=tn.output_indices,
-                size_dict=tn.size_dict,
-                shapes=tn.shapes,
-            )
-            path = contraction_tree.get_path()
+            for average_rank in average_ranks:
+                for max_dim in max_dims:
+                    for num_output_indices in num_output_indices_list:
+                        if args.verbose:
+                            print(f"\n{'=' * 60}")
+                            print(
+                                f"Sweeping size {size}\n"
+                                f"with seed {seed}\n"
+                                f"with average rank {average_rank}\n"
+                                f"with max dim {max_dim}\n"
+                                f"with num output indices {num_output_indices}"
+                            )
+                        tn = generate_random_tn(
+                            num_tensors=size,
+                            average_rank=average_rank,
+                            max_dim=max_dim,
+                            seed=seed,
+                            generate_arrays=False,
+                            num_output_indices=num_output_indices,
+                        )
+                        contraction_tree = ctg.array_contract_tree(
+                            inputs=tn.input_indices,
+                            output=tn.output_indices,
+                            size_dict=tn.size_dict,
+                            shapes=tn.shapes,
+                        )
+                        path = contraction_tree.get_path()
 
-            for strategy_cls in strategies:
-                kwargs = strategy_kwargs(strategy_cls, seed)
-                peak_memory = strategy_cls.get_peak_memory(tn, path, **kwargs)
-                total_memory = strategy_cls.get_total_memory(tn, path, **kwargs)
-                key = (size, strategy_cls.__name__)  # type: ignore[attr-defined]
-                peak_sums[key] += peak_memory.to_bytes
-                total_sums[key] += total_memory.to_bytes
-                counts[key] += 1
+                        for strategy_cls in strategies:
+                            kwargs = strategy_kwargs(strategy_cls, seed)
+                            peak_memory = strategy_cls.get_peak_memory(tn, path, **kwargs)
+                            total_memory = strategy_cls.get_total_memory(tn, path, **kwargs)
+                            key = (
+                                size,
+                                average_rank,
+                                max_dim,
+                                num_output_indices,
+                                strategy_cls.__name__,
+                            )  # type: ignore[attr-defined]
+                            peak_sums[key] += peak_memory.to_bytes
+                            total_sums[key] += total_memory.to_bytes
+                            counts[key] += 1
 
     rows: list[dict[str, float | int | str]] = []
     for size in sizes:
-        for strategy_cls in strategies:
-            strategy_name = strategy_cls.__name__  # type: ignore[attr-defined]
-            key = (size, strategy_name)
-            count = counts[key]
-            avg_peak = peak_sums[key] / count
-            avg_total = total_sums[key] / count
-            rows.append(
-                {
-                    "size": size,
-                    "strategy": strategy_name,
-                    "runs": count,
-                    "avg_peak_bytes": avg_peak,
-                    "avg_total_bytes": avg_total,
-                }
-            )
+        for average_rank in average_ranks:
+            for max_dim in max_dims:
+                for num_output_indices in num_output_indices_list:
+                    for strategy_cls in strategies:
+                        strategy_name = strategy_cls.__name__  # type: ignore[attr-defined]
+                        key = (size, average_rank, max_dim, num_output_indices, strategy_name)
+                        count = counts[key]
+                        avg_peak = peak_sums[key] / count
+                        avg_total = total_sums[key] / count
+                        rows.append(
+                            {
+                                "size": size,
+                                "strategy": strategy_name,
+                                "runs": count,
+                                "avg_peak_bytes": avg_peak,
+                                "avg_total_bytes": avg_total,
+                            }
+                        )
     return rows
 
 
@@ -192,7 +248,7 @@ def write_csv(rows: list[dict[str, float | int | str]], output_dir: Path) -> Pat
     return csv_path
 
 
-def build_plot(
+def build_line_plot(
     rows: list[dict[str, float | int | str]],
     metric: str,
     title: str,
@@ -297,7 +353,7 @@ def build_overlapping_bar_plot(
     plt.close()
 
 
-def build_comaprison_with_preserve_layout(
+def build_comaprison_with_preserve_layout_plot(
     rows: list[dict[str, float | int | str]],
     metric: str,
     title: str,
@@ -374,49 +430,60 @@ def main() -> None:
     args = parse_args()
     validate_ranges(args)
 
+    encoded_folder_name = (
+        f"{args.size_start}_{args.size_end}_"
+        f"{args.seed_start}_{args.seed_end}_"
+        f"{args.average_rank_start}_{args.average_rank_end}_"
+        f"{args.max_dim_start}_{args.max_dim_end}_"
+        f"{args.num_output_indices_start}_{args.num_output_indices_end}"
+    )
+    folder_path = args.output_dir / encoded_folder_name
+
+    if os.path.exists(folder_path):
+        print("A similar sweep already exists.")
+        sys.exit(1)
+
     rows = run_sweep(args)
 
-    csv_path = write_csv(rows, args.output_dir)
-    peak_graph = args.output_dir / "avg_peak_memory_by_size.png"
-    total_graph = args.output_dir / "avg_total_memory_by_size.png"
+    csv_path = write_csv(rows, folder_path)
+    os.makedirs(folder_path, exist_ok=True)
 
-    build_plot(
+    build_line_plot(
         rows=rows,
         metric="avg_peak_bytes",
         title="Average Peak Memory by Size (Averaged Across Seed Sweep)",
         ylabel="Average Peak Memory (bytes)",
-        output_path=peak_graph,
+        output_path=folder_path / "avg_peak_memory_by_size.png",
         show=args.show,
     )
-    build_plot(
+    build_line_plot(
         rows=rows,
         metric="avg_total_bytes",
         title="Average Total Memory by Size (Averaged Across Seed Sweep)",
         ylabel="Average Total Memory (bytes)",
-        output_path=total_graph,
+        output_path=folder_path / "avg_total_memory_by_size.png",
         show=args.show,
     )
-    build_comaprison_with_preserve_layout(
+    build_comaprison_with_preserve_layout_plot(
         rows=rows,
         metric="avg_peak_bytes",
         title="Difference in Average Peak Memory Compared to PreserveLayout",
         ylabel="Average Peak Memory Difference (percentage)",
-        output_path=args.output_dir / "peak_memory_difference_from_preserve_layout.png",
+        output_path=folder_path / "peak_memory_difference_from_preserve_layout.png",
         show=args.show,
     )
-    build_comaprison_with_preserve_layout(
+    build_comaprison_with_preserve_layout_plot(
         rows=rows,
         metric="avg_total_bytes",
         title="Difference in Average Total Memory Compared to PreserveLayout",
         ylabel="Average Total Memory Difference (percentage)",
-        output_path=args.output_dir / "total_memory_difference_from_preserve_layout.png",
+        output_path=folder_path / "total_memory_difference_from_preserve_layout.png",
         show=args.show,
     )
 
     print("\nCompleted strategy comparison sweep.")
     print(f"Saved CSV: {csv_path}")
-    print(f"Saved peak plot: {peak_graph}")
-    print(f"Saved total plot: {total_graph}")
+    print(f"Saved graphs in: {folder_path}")
 
 
 if __name__ == "__main__":
