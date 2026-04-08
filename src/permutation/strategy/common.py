@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from typing import Collection
+from typing import Collection, overload
 
-from contraction.path import PersistentContractionPath
+from contraction.path import ContractionPath, PersistentContractionPath
 from contraction.tensor import get_contracted_indices
 from contraction.tree import ContractionTree, ContractionTreeNode
 from permutation import Permutation
@@ -49,19 +49,27 @@ def get_step_tensors(
     return before.tensors[left_pos], before.tensors[right_pos], after.tensors[left_pos]
 
 
+@overload
 def build_tree_maps(
-    persistent_path: PersistentContractionPath,
+    path: PersistentContractionPath,
+) -> tuple[ContractionTree, dict[int, ContractionTreeNode], dict[int, ContractionTreeNode]]: ...
+@overload
+def build_tree_maps(
+    path: ContractionPath,
+) -> tuple[ContractionTree, dict[int, ContractionTreeNode], dict[int, ContractionTreeNode]]: ...
+def build_tree_maps(
+    path: PersistentContractionPath | ContractionPath,
 ) -> tuple[ContractionTree, dict[int, ContractionTreeNode], dict[int, ContractionTreeNode]]:
     """Build lookup maps for contraction tree nodes.
 
     Args:
-        persistent_path: The persistent contraction path.
+        path: The contraction path.
 
     Returns:
         A tuple containing the contraction tree, a map from initial tensor positions
         to leaf nodes, and a map from contraction step indices to internal nodes.
     """
-    tree = ContractionTree.from_contraction_path(persistent_path)
+    tree = ContractionTree.from_contraction_path(path)
     leaf_to_node: dict[int, ContractionTreeNode] = {}
     step_to_node: dict[int, ContractionTreeNode] = {}
 

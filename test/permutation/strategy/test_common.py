@@ -74,7 +74,10 @@ class TestGetStepTensors:
 class TestBuildTreeMaps:
     """Test building lookup maps for contraction tree nodes."""
 
-    def test_build_tree_maps(self) -> None:
+    @pytest.mark.parametrize(
+        "use_persistent_path", [True, False], ids=["persistent_path", "contraction_path"]
+    )
+    def test_build_tree_maps(self, use_persistent_path: bool) -> None:
         """Test that the contraction tree and lookup maps are built correctly."""
         network = TensorNetwork(
             input_indices=[[0, 1], [1, 2]],
@@ -83,8 +86,12 @@ class TestBuildTreeMaps:
             shapes=[(2, 3), (3, 4)],
             tensor_arrays=None,
         )
-        persistent_path = PersistentContractionPath.from_contraction_path(network, [(0, 1)])
-        tree, leaf_to_node, step_to_node = build_tree_maps(persistent_path)
+        path = (
+            PersistentContractionPath.from_contraction_path(network, [(0, 1)])
+            if use_persistent_path
+            else [(0, 1)]
+        )
+        tree, leaf_to_node, step_to_node = build_tree_maps(path)
         assert isinstance(tree, ContractionTree)
         assert len(leaf_to_node) == 2
         assert len(step_to_node) == 1
