@@ -3,12 +3,11 @@
 from collections.abc import Sequence
 from copy import deepcopy
 from dataclasses import dataclass
-from typing import TypeAlias
 
 from contraction.tensor_network import contract_tensors_in_network
 from tensor_network import TensorNetwork
 
-ContractionPath: TypeAlias = Sequence[tuple[int, int]]
+type ContractionPath = Sequence[tuple[int, int]]
 
 
 @dataclass
