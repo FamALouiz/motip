@@ -62,8 +62,9 @@ class PreserveLayoutPermutationStrategy(IPermutationStrategy):
             left_tensor = state_before.tensors[left_pos]
             right_tensor = state_before.tensors[right_pos]
 
-            result_tensor = persistent_path.get_state(step + 1).tensors[left_pos]
-            result_memory = memory_calculator.calculate_memory_for_tensor(result_tensor)
+            result_memory = memory_calculator.calculate_memory_for_contraction(
+                left_tensor, right_tensor
+            )
 
             current_memory += result_memory
             peak_memory = max(peak_memory, current_memory)
@@ -95,11 +96,12 @@ class PreserveLayoutPermutationStrategy(IPermutationStrategy):
             state_before = persistent_path.get_state(step)
             left_tensor = state_before.tensors[left_pos]
             right_tensor = state_before.tensors[right_pos]
-            result_tensor = persistent_path.get_state(step + 1).tensors[left_pos]
 
             left_memory = memory_calculator.calculate_memory_for_tensor(left_tensor)
             right_memory = memory_calculator.calculate_memory_for_tensor(right_tensor)
-            result_memory = memory_calculator.calculate_memory_for_tensor(result_tensor)
+            result_memory = memory_calculator.calculate_memory_for_contraction(
+                left_tensor, right_tensor
+            )
 
             total_memory += left_memory + right_memory + result_memory
 
