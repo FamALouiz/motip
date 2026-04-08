@@ -5,16 +5,13 @@ from typing import Collection
 import pytest
 
 from contraction.path import PersistentContractionPath
-from contraction.tensor import Tensor
 from contraction.tree import ContractionTree
 from permutation.strategy.common import (
-    apply_layout_to_tensor,
     build_tree_maps,
     get_input_layout_for_parent_use,
     get_result_layout_from_current_step,
     get_step_tensors,
     sort_indices_by_size,
-    to_identity_permutation,
 )
 from tensor_network.tn import TensorNetwork
 
@@ -180,36 +177,3 @@ class TestGetResultLayoutFromCurrentStep:
             0, persistent_path, {0: 4, 1: 3, 2: 2}, left_first=left_first
         )
         assert result == [0, 2] if left_first else [2, 0]
-
-
-class TestToIdentityPermutation:
-    """Test converting a tensor's input indices to the identity permutation."""
-
-    @pytest.mark.parametrize(
-        "input_indices",
-        [
-            [0, 1, 2],
-            [2, 0, 1],
-        ],
-    )
-    def test_to_identity_permutation(self, input_indices: list[int]) -> None:
-        """Test that the input indices are returned in sorted order."""
-        tensor = Tensor(input_indices=input_indices, shape=(2, 3, 4), array=None)
-        result = to_identity_permutation(tensor)
-        assert result == (0, 1, 2)
-
-
-class TestApplyLayoutToTensor:
-    """Test applying a target layout to a tensor's input indices."""
-
-    def test_apply_layout(self) -> None:
-        """Test that the correct permutation is returned for a given layout."""
-        tensor = Tensor(input_indices=[0, 1, 2], shape=(2, 3, 4), array=None)
-        result = apply_layout_to_tensor(tensor, [2, 0, 1])
-        assert result == (2, 0, 1)
-
-    def test_apply_layout_with_missing_index_should_raise(self) -> None:
-        """Test that a ValueError is raised if the layout is missing an index from the tensor."""
-        tensor = Tensor(input_indices=[0, 1, 2], shape=(2, 3, 4), array=None)
-        with pytest.raises(ValueError):
-            apply_layout_to_tensor(tensor, [0, 1])

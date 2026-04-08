@@ -12,8 +12,8 @@ from permutation.strategy.common import (
     build_tree_maps,
     get_input_layout_for_parent_use,
     sort_indices_by_size,
-    to_identity_permutation,
 )
+from permutation.utils import to_identity_permutation
 from tensor_network.tn import TensorNetwork
 
 

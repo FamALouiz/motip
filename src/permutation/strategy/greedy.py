@@ -10,7 +10,7 @@ from memory.memory import Memory
 from memory.utils import get_largest_intermediate_tensor_in_contraction_path
 from permutation import Permutation
 from permutation.strategy import IPermutationStrategy
-from permutation.tensor import to_permutation
+from permutation.utils import to_permutation
 from tensor import Tensor
 from tensor_network.tn import TensorNetwork
 

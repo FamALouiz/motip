@@ -8,7 +8,7 @@ from contraction.path import PersistentContractionPath
 from contraction.tensor import get_contracted_indices
 from contraction.tree import ContractionTree, ContractionTreeNode
 from permutation import Permutation
-from permutation.tensor import to_permutation
+from permutation.utils import to_permutation
 from tensor import Tensor
 
 
@@ -148,18 +148,6 @@ def get_result_layout_from_current_step(
         left_free_sorted + right_free_sorted if left_first else right_free_sorted + left_free_sorted
     )
     return [idx for idx in result_layout if idx in result_tensor.input_indices]
-
-
-def to_identity_permutation(tensor: Tensor) -> Permutation:
-    """Return the identity permutation for a tensor.
-
-    Args:
-        tensor: The tensor.
-
-    Returns:
-        The identity permutation.
-    """
-    return tuple(range(len(tensor.input_indices)))
 
 
 def apply_layout_to_tensor(tensor: Tensor, layout: list[int]) -> Permutation:

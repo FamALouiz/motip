@@ -7,7 +7,7 @@ from memory.calculator.calculator import MemoryCalculator
 from memory.memory import Memory
 from permutation import Permutation
 from permutation.strategy import IPermutationStrategy
-from permutation.strategy.common import to_identity_permutation
+from permutation.utils import to_identity_permutation
 from tensor_network.tn import TensorNetwork
 
 

@@ -15,8 +15,8 @@ from permutation.strategy.common import (
     apply_layout_to_tensor,
     build_tree_maps,
     get_step_tensors,
-    to_identity_permutation,
 )
+from permutation.utils import to_identity_permutation
 from tensor import Tensor
 from tensor_network.tn import TensorNetwork
 
