@@ -82,25 +82,39 @@ class ContractionTree:
     def from_contraction_path(
         path: PersistentContractionPath | ContractionPath,
     ) -> "ContractionTree":
-        """Build a binary contraction tree from a persistent path.
+        """Build a binary contraction tree from a contraction path.
 
         The tree follows the same index semantics as `contract_tensors_in_network`:
         at each step `(i, j)`, tensors at positions `i` and `j` are contracted and
         the resulting tensor is inserted back at `i`.
         """
-        if not isinstance(path, PersistentContractionPath):
-            raise NotImplementedError(
-                "from_contraction_path with a raw ContractionPath is not implemented. "
-                "Please create a PersistentContractionPath first using "
-                "PersistentContractionPath.from_contraction_path(network, path)."
-            )
+        pairs = tuple(path.path) if isinstance(path, PersistentContractionPath) else tuple(path)
+
+        for pair in pairs:
+            if len(pair) != 2:
+                raise ValueError("Each contraction step must be a pair of tensor indices.")
+            left_index, right_index = pair
+            if left_index == right_index:
+                raise ValueError("Contraction pair must contain two distinct tensor indices.")
+            if left_index < 0 or right_index < 0:
+                raise ValueError("Contraction indices must be non-negative.")
+
+        if isinstance(path, PersistentContractionPath):
+            return ContractionTree.__from_persistent_contraction_path(path, pairs)
+        else:
+            return ContractionTree.__from_contraction_path(pairs)
+
+    @staticmethod
+    def __from_persistent_contraction_path(
+        path: PersistentContractionPath,
+        pairs: tuple[tuple[int, int], ...],
+    ) -> "ContractionTree":
         if not path.history:
             raise ValueError("Persistent contraction path history cannot be empty.")
 
         initial_tensor_count = len(path.history[0])
         if initial_tensor_count == 0:
             raise ValueError("Cannot build a contraction tree from an empty tensor network.")
-
         if len(path.history[-1]) != 1:
             raise ValueError(
                 "Contraction tree requires a complete path ending in exactly one tensor."
@@ -111,31 +125,13 @@ class ContractionTree:
             for index in range(initial_tensor_count)
         ]
 
-        for step, pair in enumerate(path.path):
+        for step, pair in enumerate(pairs):
             if len(active_nodes) != len(path.history[step]):
                 raise ValueError(
                     "Persistent path history is inconsistent with path contraction steps."
                 )
 
-            left_index, right_index = pair
-            if left_index == right_index:
-                raise ValueError("Contraction pair must contain two distinct tensor indices.")
-            if left_index < 0 or right_index < 0:
-                raise ValueError("Contraction indices must be non-negative.")
-            if left_index >= len(active_nodes) or right_index >= len(active_nodes):
-                raise ValueError("Contraction indices are out of range for current step.")
-
-            parent = ContractionTreeNode(
-                left=active_nodes[left_index],
-                right=active_nodes[right_index],
-                contraction_step=step,
-            )
-
-            active_nodes[left_index].parent = parent
-            active_nodes[right_index].parent = parent
-
-            active_nodes = [node for index, node in enumerate(active_nodes) if index not in pair]
-            active_nodes.insert(left_index, parent)
+            active_nodes = ContractionTree.__contract_active_nodes(active_nodes, step, pair)
 
             if len(active_nodes) != len(path.history[step + 1]):
                 raise ValueError(
@@ -145,8 +141,52 @@ class ContractionTree:
         if len(active_nodes) != 1:
             raise ValueError("Contraction path did not collapse to a single output tensor.")
 
-        return ContractionTree(
-            root=active_nodes[0],
-            path=tuple(path.path),
-            num_leaves=initial_tensor_count,
+        return ContractionTree(root=active_nodes[0], path=pairs, num_leaves=initial_tensor_count)
+
+    @staticmethod
+    def __from_contraction_path(path: ContractionPath) -> "ContractionTree":
+        if not path:
+            raise ValueError(
+                "Contraction path cannot be empty when building from a raw ContractionPath."
+            )
+
+        initial_tensor_count = len(path) + 1
+        active_nodes = [
+            ContractionTreeNode(initial_tensor_position=index)
+            for index in range(initial_tensor_count)
+        ]
+
+        for step, pair in enumerate(path):
+            active_nodes = ContractionTree.__contract_active_nodes(active_nodes, step, pair)
+
+        if len(active_nodes) != 1:
+            raise ValueError("Contraction path did not collapse to a single output tensor.")
+
+        return ContractionTree(root=active_nodes[0], path=path, num_leaves=initial_tensor_count)
+
+    @staticmethod
+    def __contract_active_nodes(
+        active_nodes: list[ContractionTreeNode],
+        step: int,
+        pair: tuple[int, int],
+    ) -> list[ContractionTreeNode]:
+        left_index, right_index = pair
+        if left_index >= len(active_nodes) or right_index >= len(active_nodes):
+            raise ValueError("Contraction indices are out of range for current step.")
+
+        parent = ContractionTreeNode(
+            left=active_nodes[left_index],
+            right=active_nodes[right_index],
+            contraction_step=step,
         )
+
+        active_nodes[left_index].parent = parent
+        active_nodes[right_index].parent = parent
+
+        updated_active_nodes = [
+            node
+            for index, node in enumerate(active_nodes)
+            if index not in (left_index, right_index)
+        ]
+        updated_active_nodes.insert(left_index, parent)
+        return updated_active_nodes
