@@ -10,9 +10,11 @@ from __future__ import annotations
 import argparse
 import csv
 import inspect
+import multiprocessing as mp
 import os
 import sys
 from collections import defaultdict
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from pathlib import Path
 
 import cotengra as ctg
@@ -38,6 +40,10 @@ from permutation.strategy.local_optimal import LocalOptimalPermutationStrategy  
 from permutation.strategy.next_use_aware import NextUseAwarePermutationStrategy  # noqa: I001, E402
 from permutation.strategy.preserve_layout import PreserveLayoutPermutationStrategy  # noqa: I001, E402
 from tensor_network.utils.random import generate_random_tn  # noqa: I001, E402
+
+SweepKey = tuple[int, int, int, int, str]
+WorkItem = tuple[int, int, int, int, int]
+PartialAggregate = dict[SweepKey, tuple[int, int, int]]
 
 
 def parse_args() -> argparse.Namespace:
@@ -99,6 +105,12 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Display plots interactively in addition to saving them.",
     )
+    parser.add_argument(
+        "--num-workers",
+        type=int,
+        default=1,
+        help="Number of worker processes for --parallel mode (default: CPU count).",
+    )
     parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose mode.")
     return parser.parse_args()
 
@@ -140,6 +152,105 @@ def validate_ranges(args: argparse.Namespace) -> None:
         raise ValueError("max-dim-start must be <= max-dim-end")
     if args.num_output_indices_start > args.num_output_indices_end:
         raise ValueError("num-output-indices-start must be <= num-output-indices-end")
+    if args.num_workers is not None and args.num_workers < 1:
+        raise ValueError("num-workers must be >= 1")
+
+
+def create_work_items(args: argparse.Namespace) -> list[WorkItem]:
+    """Build independent work items for dynamic scheduling across processes."""
+    sizes = range(args.size_start, args.size_end + 1)
+    seeds = range(args.seed_start, args.seed_end + 1)
+    average_ranks = range(args.average_rank_start, args.average_rank_end + 1)
+    max_dims = range(args.max_dim_start, args.max_dim_end + 1)
+    num_output_indices_list = range(args.num_output_indices_start, args.num_output_indices_end + 1)
+
+    work_items: list[WorkItem] = []
+    for size in sizes:
+        for seed in seeds:
+            for average_rank in average_ranks:
+                for max_dim in max_dims:
+                    for num_output_indices in num_output_indices_list:
+                        work_items.append((size, seed, average_rank, max_dim, num_output_indices))
+    return work_items
+
+
+def evaluate_work_item(item: WorkItem) -> PartialAggregate:
+    """Evaluate all strategies for a single sweep item and return partial sums."""
+    size, seed, average_rank, max_dim, num_output_indices = item
+    tn = generate_random_tn(
+        num_tensors=size,
+        average_rank=average_rank,
+        max_dim=max_dim,
+        seed=seed,
+        generate_arrays=False,
+        num_output_indices=num_output_indices,
+    )
+    contraction_tree = ctg.array_contract_tree(
+        inputs=tn.input_indices,
+        output=tn.output_indices,
+        size_dict=tn.size_dict,
+        shapes=tn.shapes,
+    )
+    path = contraction_tree.get_path()
+
+    partial: PartialAggregate = {}
+    for strategy_cls in get_strategies():
+        kwargs = strategy_kwargs(strategy_cls, seed)
+        peak_memory = strategy_cls.get_peak_memory(tn, path, **kwargs)
+        total_memory = strategy_cls.get_total_memory(tn, path, **kwargs)
+        key: SweepKey = (
+            size,
+            average_rank,
+            max_dim,
+            num_output_indices,
+            strategy_cls.__name__,  # type: ignore[attr-defined]
+        )
+        partial[key] = (peak_memory.to_bytes, total_memory.to_bytes, 1)
+    return partial
+
+
+def build_rows_from_aggregates(
+    args: argparse.Namespace,
+    strategies: list[IPermutationStrategy],
+    peak_sums: dict[SweepKey, int],
+    total_sums: dict[SweepKey, int],
+    counts: dict[SweepKey, int],
+) -> list[dict[str, float | int | str]]:
+    """Build final output rows from accumulated sums and run counts."""
+    sizes = range(args.size_start, args.size_end + 1)
+    average_ranks = range(args.average_rank_start, args.average_rank_end + 1)
+    max_dims = range(args.max_dim_start, args.max_dim_end + 1)
+    num_output_indices_list = range(args.num_output_indices_start, args.num_output_indices_end + 1)
+
+    rows: list[dict[str, float | int | str]] = []
+    for size in sizes:
+        for average_rank in average_ranks:
+            for max_dim in max_dims:
+                for num_output_indices in num_output_indices_list:
+                    for strategy_cls in strategies:
+                        strategy_name = strategy_cls.__name__  # type: ignore[attr-defined]
+                        key: SweepKey = (
+                            size,
+                            average_rank,
+                            max_dim,
+                            num_output_indices,
+                            strategy_name,
+                        )
+                        count = counts.get(key, 0)
+                        if count == 0:
+                            continue
+                        avg_peak = peak_sums[key] / count
+                        avg_total = total_sums[key] / count
+                        rows.append(
+                            {
+                                "size": size,
+                                "strategy": strategy_name,
+                                "runs": count,
+                                "avg_peak_bytes": avg_peak,
+                                "avg_total_bytes": avg_total,
+                            }
+                        )
+    return rows
 
 
 def run_sweep(args: argparse.Namespace) -> list[dict[str, float | int | str]]:
@@ -211,27 +322,55 @@ def run_sweep(args: argparse.Namespace) -> list[dict[str, float | int | str]]:
                             total_sums[key] += total_memory.to_bytes
                             counts[key] += 1
 
-    rows: list[dict[str, float | int | str]] = []
-    for size in sizes:
-        for average_rank in average_ranks:
-            for max_dim in max_dims:
-                for num_output_indices in num_output_indices_list:
-                    for strategy_cls in strategies:
-                        strategy_name = strategy_cls.__name__  # type: ignore[attr-defined]
-                        key = (size, average_rank, max_dim, num_output_indices, strategy_name)
-                        count = counts[key]
-                        avg_peak = peak_sums[key] / count
-                        avg_total = total_sums[key] / count
-                        rows.append(
-                            {
-                                "size": size,
-                                "strategy": strategy_name,
-                                "runs": count,
-                                "avg_peak_bytes": avg_peak,
-                                "avg_total_bytes": avg_total,
-                            }
-                        )
-    return rows
+    return build_rows_from_aggregates(args, strategies, peak_sums, total_sums, counts)
+
+
+def run_sweep_parallel(args: argparse.Namespace) -> list[dict[str, float | int | str]]:
+    """Execute the configured sweep in parallel and return averaged rows."""
+    strategies = get_strategies()
+    work_items = create_work_items(args)
+    max_workers = args.num_workers or os.cpu_count() or 1
+
+    peak_sums: dict[SweepKey, int] = defaultdict(int)
+    total_sums: dict[SweepKey, int] = defaultdict(int)
+    counts: dict[SweepKey, int] = defaultdict(int)
+    failed_items: list[WorkItem] = []
+
+    print(f"\n{'=' * 60}")
+    print(
+        f"Running parallel sweep with {max_workers} workers\n"
+        f"Total work items: {len(work_items)}\n"
+        f"and strategies {[cls.__name__ for cls in strategies]}"  # type: ignore[attr-defined]
+    )
+
+    mp_context = mp.get_context("spawn")
+    with ProcessPoolExecutor(max_workers=max_workers, mp_context=mp_context) as executor:
+        futures = {executor.submit(evaluate_work_item, item): item for item in work_items}
+
+        for completed, future in enumerate(as_completed(futures), start=1):
+            item = futures[future]
+            try:
+                partial = future.result()
+            except Exception as exc:
+                failed_items.append(item)
+                if args.verbose:
+                    print(f"Failed item {item}: {exc}")
+                continue
+
+            for key, (peak_sum, total_sum, count) in partial.items():
+                peak_sums[key] += peak_sum
+                total_sums[key] += total_sum
+                counts[key] += count
+
+            if args.verbose and completed % (len(work_items) // 100) == 0:
+                print(f"Completed {completed}/{len(work_items)} work items")
+
+    if failed_items:
+        print(f"Warning: {len(failed_items)} work items failed and were skipped.")
+        preview = failed_items[:5]
+        print(f"First failed items: {preview}")
+
+    return build_rows_from_aggregates(args, strategies, peak_sums, total_sums, counts)
 
 
 def write_csv(rows: list[dict[str, float | int | str]], output_dir: Path) -> Path:
@@ -443,7 +582,10 @@ def main() -> None:
         print("A similar sweep already exists.")
         sys.exit(1)
 
-    rows = run_sweep(args)
+    if args.num_workers != 1:
+        rows = run_sweep_parallel(args)
+    else:
+        rows = run_sweep(args)
 
     csv_path = write_csv(rows, folder_path)
     os.makedirs(folder_path, exist_ok=True)
