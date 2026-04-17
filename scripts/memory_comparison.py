@@ -41,9 +41,9 @@ from permutation.strategy.next_use_aware import NextUseAwarePermutationStrategy 
 from permutation.strategy.preserve_layout import PreserveLayoutPermutationStrategy  # noqa: I001, E402
 from tensor_network.utils.random import generate_random_tn  # noqa: I001, E402
 
-SweepKey = tuple[int, int, int, int, str]
+SweepKey = tuple[int, int, int, int, int, str]
 WorkItem = tuple[int, int, int, int, int]
-PartialAggregate = dict[SweepKey, tuple[int, int, int]]
+PartialAggregate = dict[SweepKey, tuple[int, int]]
 
 
 def parse_args() -> argparse.Namespace:
@@ -200,56 +200,59 @@ def evaluate_work_item(item: WorkItem) -> PartialAggregate:
         total_memory = strategy_cls.get_total_memory(tn, path, **kwargs)
         key: SweepKey = (
             size,
+            seed,
             average_rank,
             max_dim,
             num_output_indices,
             strategy_cls.__name__,  # type: ignore[attr-defined]
         )
-        partial[key] = (peak_memory.to_bytes, total_memory.to_bytes, 1)
+        partial[key] = (peak_memory.to_bytes, total_memory.to_bytes)
     return partial
 
 
 def build_rows_from_aggregates(
     args: argparse.Namespace,
     strategies: list[IPermutationStrategy],
-    peak_sums: dict[SweepKey, int],
-    total_sums: dict[SweepKey, int],
-    counts: dict[SweepKey, int],
+    peak_values: dict[SweepKey, int],
+    total_values: dict[SweepKey, int],
 ) -> list[dict[str, float | int | str]]:
-    """Build final output rows from accumulated sums and run counts."""
+    """Build final output rows from accumulated memory values."""
     sizes = range(args.size_start, args.size_end + 1)
+    seeds = range(args.seed_start, args.seed_end + 1)
     average_ranks = range(args.average_rank_start, args.average_rank_end + 1)
     max_dims = range(args.max_dim_start, args.max_dim_end + 1)
     num_output_indices_list = range(args.num_output_indices_start, args.num_output_indices_end + 1)
 
     rows: list[dict[str, float | int | str]] = []
     for size in sizes:
-        for average_rank in average_ranks:
-            for max_dim in max_dims:
-                for num_output_indices in num_output_indices_list:
-                    for strategy_cls in strategies:
-                        strategy_name = strategy_cls.__name__  # type: ignore[attr-defined]
-                        key: SweepKey = (
-                            size,
-                            average_rank,
-                            max_dim,
-                            num_output_indices,
-                            strategy_name,
-                        )
-                        count = counts.get(key, 0)
-                        if count == 0:
-                            continue
-                        avg_peak = peak_sums[key] / count
-                        avg_total = total_sums[key] / count
-                        rows.append(
-                            {
-                                "size": size,
-                                "strategy": strategy_name,
-                                "runs": count,
-                                "avg_peak_bytes": avg_peak,
-                                "avg_total_bytes": avg_total,
-                            }
-                        )
+        for seed in seeds:
+            for average_rank in average_ranks:
+                for max_dim in max_dims:
+                    for num_output_indices in num_output_indices_list:
+                        for strategy_cls in strategies:
+                            strategy_name = strategy_cls.__name__  # type: ignore[attr-defined]
+                            key: SweepKey = (
+                                size,
+                                seed,
+                                average_rank,
+                                max_dim,
+                                num_output_indices,
+                                strategy_name,
+                            )
+                            if key not in peak_values:
+                                continue
+                            rows.append(
+                                {
+                                    "size": size,
+                                    "seed": seed,
+                                    "average_rank": average_rank,
+                                    "max_dim": max_dim,
+                                    "num_output_indices": num_output_indices,
+                                    "strategy": strategy_name,
+                                    "avg_peak_bytes": peak_values[key],
+                                    "avg_total_bytes": total_values[key],
+                                }
+                            )
     return rows
 
 
@@ -262,9 +265,8 @@ def run_sweep(args: argparse.Namespace) -> list[dict[str, float | int | str]]:
     max_dims = range(args.max_dim_start, args.max_dim_end + 1)
     num_output_indices_list = range(args.num_output_indices_start, args.num_output_indices_end + 1)
 
-    peak_sums: dict[tuple[int, int, int, int, str], int] = defaultdict(int)
-    total_sums: dict[tuple[int, int, int, int, str], int] = defaultdict(int)
-    counts: dict[tuple[int, int, int, int, str], int] = defaultdict(int)
+    peak_values: dict[tuple[int, int, int, int, int, str], int] = {}
+    total_values: dict[tuple[int, int, int, int, int, str], int] = {}
 
     print(f"\n{'=' * 60}")
     print(
@@ -313,16 +315,16 @@ def run_sweep(args: argparse.Namespace) -> list[dict[str, float | int | str]]:
                             total_memory = strategy_cls.get_total_memory(tn, path, **kwargs)
                             key = (
                                 size,
+                                seed,
                                 average_rank,
                                 max_dim,
                                 num_output_indices,
                                 strategy_cls.__name__,  # type: ignore[attr-defined]
                             )
-                            peak_sums[key] += peak_memory.to_bytes
-                            total_sums[key] += total_memory.to_bytes
-                            counts[key] += 1
+                            peak_values[key] = peak_memory.to_bytes
+                            total_values[key] = total_memory.to_bytes
 
-    return build_rows_from_aggregates(args, strategies, peak_sums, total_sums, counts)
+    return build_rows_from_aggregates(args, strategies, peak_values, total_values)
 
 
 def run_sweep_parallel(args: argparse.Namespace) -> list[dict[str, float | int | str]]:
@@ -331,9 +333,8 @@ def run_sweep_parallel(args: argparse.Namespace) -> list[dict[str, float | int |
     work_items = create_work_items(args)
     max_workers = args.num_workers or os.cpu_count() or 1
 
-    peak_sums: dict[SweepKey, int] = defaultdict(int)
-    total_sums: dict[SweepKey, int] = defaultdict(int)
-    counts: dict[SweepKey, int] = defaultdict(int)
+    peak_values: dict[SweepKey, int] = {}
+    total_values: dict[SweepKey, int] = {}
     failed_items: list[WorkItem] = []
 
     print(f"\n{'=' * 60}")
@@ -357,10 +358,9 @@ def run_sweep_parallel(args: argparse.Namespace) -> list[dict[str, float | int |
                     print(f"Failed item {item}: {exc}")
                 continue
 
-            for key, (peak_sum, total_sum, count) in partial.items():
-                peak_sums[key] += peak_sum
-                total_sums[key] += total_sum
-                counts[key] += count
+            for key, (peak_val, total_val) in partial.items():
+                peak_values[key] = peak_val
+                total_values[key] = total_val
 
             if args.verbose and completed % (len(work_items) // 100) == 0:
                 print(f"Completed {completed}/{len(work_items)} work items")
@@ -370,7 +370,7 @@ def run_sweep_parallel(args: argparse.Namespace) -> list[dict[str, float | int |
         preview = failed_items[:5]
         print(f"First failed items: {preview}")
 
-    return build_rows_from_aggregates(args, strategies, peak_sums, total_sums, counts)
+    return build_rows_from_aggregates(args, strategies, peak_values, total_values)
 
 
 def write_csv(rows: list[dict[str, float | int | str]], output_dir: Path) -> Path:
@@ -380,7 +380,16 @@ def write_csv(rows: list[dict[str, float | int | str]], output_dir: Path) -> Pat
     with csv_path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(
             handle,
-            fieldnames=["size", "strategy", "runs", "avg_peak_bytes", "avg_total_bytes"],
+            fieldnames=[
+                "size",
+                "seed",
+                "average_rank",
+                "max_dim",
+                "num_output_indices",
+                "strategy",
+                "avg_peak_bytes",
+                "avg_total_bytes",
+            ],
         )
         writer.writeheader()
         writer.writerows(rows)
