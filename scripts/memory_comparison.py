@@ -363,7 +363,7 @@ def run_sweep_parallel(args: argparse.Namespace) -> list[dict[str, float | int |
                 total_values[key] = total_val
 
             if args.verbose and completed % (len(work_items) // 100) == 0:
-                print(f"Completed {completed}/{len(work_items)} work items")
+                print(f"Completed {completed / len(work_items) * 100:.1f}% of work items", end="\r")
 
     if failed_items:
         print(f"Warning: {len(failed_items)} work items failed and were skipped.")
