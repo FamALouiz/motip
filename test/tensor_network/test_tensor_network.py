@@ -2,6 +2,7 @@
 
 import numpy as np
 import pytest
+from more_itertools import one
 
 from tensor import Tensor
 from tensor_network import TensorNetwork
@@ -166,6 +167,113 @@ class TestTensorNetwork:
                 output_indices=[0],
                 size_dict={0: 3, 1: 4, 2: 5},
             )
+
+    def test_as_graph_creates_correct_nodes(self) -> None:
+        """Test that as_graph creates a node for each tensor."""
+        network = TensorNetwork(
+            input_indices=[[0, 1], [1, 2], [2, 3]],
+            output_indices=[0, 3],
+            size_dict={0: 2, 1: 3, 2: 4, 3: 5},
+            shapes=[(2, 3), (3, 4), (4, 5)],
+        )
+
+        graph = network.as_graph
+
+        assert set(graph.nodes()) == {0, 1, 2}
+        assert len(graph.nodes()) == 3
+
+    def test_as_graph_creates_edges_for_shared_indices(self) -> None:
+        """Test that as_graph creates edges between tensors that share indices."""
+        # Tensor 0: indices [0, 1]
+        # Tensor 1: indices [1, 2] - shares index 1 with tensor 0
+        # Tensor 2: indices [2, 3] - shares index 2 with tensor 1
+        network = TensorNetwork(
+            input_indices=[[0, 1], [1, 2], [2, 3]],
+            output_indices=[0, 3],
+            size_dict={0: 2, 1: 3, 2: 4, 3: 5},
+            shapes=[(2, 3), (3, 4), (4, 5)],
+        )
+
+        graph = network.as_graph
+
+        assert graph.has_edge(0, 1)
+        assert graph.has_edge(1, 2)
+        assert not graph.has_edge(0, 2)
+
+    def test_as_graph_edge_has_correct_index_attribute(self) -> None:
+        """Test that edge attributes contain the correct shared index."""
+        network = TensorNetwork(
+            input_indices=[[0, 1], [1, 2]],
+            output_indices=[0],
+            size_dict={0: 2, 1: 3, 2: 4},
+            shapes=[(2, 3), (3, 4)],
+        )
+
+        graph = network.as_graph
+
+        assert one(graph[0][1]["index"]) == 1
+
+    def test_as_graph_multiple_shared_indices(self) -> None:
+        """Test that multiple shared indices between two tensors create multiple edges."""
+        # Tensor 0: indices [0, 1, 2]
+        # Tensor 1: indices [1, 2, 3] - shares indices 1 and 2 with tensor 0
+        network = TensorNetwork(
+            input_indices=[[0, 1, 2], [1, 2, 3]],
+            output_indices=[0, 3],
+            size_dict={0: 2, 1: 3, 2: 4, 3: 5},
+            shapes=[(2, 3, 4), (3, 4, 5)],
+        )
+
+        graph = network.as_graph
+
+        # The graph itself has only 1 edge, but this is a dense edge with multiple indices
+        edges_between_0_1 = graph.edges(data=True)
+        assert one(edges_between_0_1)[2]["index"] == [1, 2]
+
+    def test_as_graph_disconnected_tensors_have_no_edges(self) -> None:
+        """Test that tensors with no shared indices are not connected."""
+        # Tensor 0: indices [0, 1]
+        # Tensor 1: indices [2, 3] - no shared indices with tensor 0
+        network = TensorNetwork(
+            input_indices=[[0, 1], [2, 3]],
+            output_indices=[0, 3],
+            size_dict={0: 2, 1: 3, 2: 4, 3: 5},
+            shapes=[(2, 3), (4, 5)],
+        )
+
+        graph = network.as_graph
+
+        assert set(graph.nodes()) == {0, 1}
+        assert not graph.has_edge(0, 1)
+
+    def test_as_graph_single_tensor(self) -> None:
+        """Test as_graph with a single tensor (no possible connections)."""
+        network = TensorNetwork(
+            input_indices=[[0, 1]],
+            output_indices=[0],
+            size_dict={0: 2, 1: 3},
+            shapes=[(2, 3)],
+        )
+
+        graph = network.as_graph
+
+        assert len(graph.nodes()) == 1
+        assert 0 in graph.nodes()
+        assert len(graph.edges()) == 0
+
+    def test_as_graph_empty_network(self) -> None:
+        """Test as_graph with an empty tensor network."""
+        network = TensorNetwork(
+            input_indices=[],
+            output_indices=[],
+            size_dict={},
+            shapes=[],
+        )
+
+        graph = network.as_graph
+
+        assert len(graph.nodes()) == 0
+        assert len(graph.edges()) == 0
 
 
 class TestTensorPool:
