@@ -3,8 +3,10 @@
 from dataclasses import dataclass
 from typing import Iterator, Optional, override
 
+from networkx import Graph
 from numpy import ndarray
 
+from contraction.tensor import get_contracted_indices
 from tensor import Tensor
 
 
@@ -179,6 +181,27 @@ class TensorNetwork:
             self.size_dict,
             self.tensor_arrays,
         )
+
+    @property
+    def as_graph(self) -> Graph:
+        """Return the tensor network as a NetworkX graph.
+
+        Nodes represent tensors and edges represent shared indices (legs).
+        Two tensors are connected if they share an index in their input_indices.
+        """
+        graph = Graph()
+
+        for i in range(len(self.tensors)):
+            graph.add_node(i)
+
+        for i, tensor_i in enumerate(self.tensors):
+            for j, tensor_j in enumerate(self.tensors):
+                if i < j:
+                    shared = get_contracted_indices(tensor_i, tensor_j)
+                    if len(shared) > 0:
+                        graph.add_edge(i, j, index=list(shared))
+
+        return graph
 
     @property
     def arrays(self) -> list[ndarray]:
