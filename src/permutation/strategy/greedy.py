@@ -153,6 +153,8 @@ class GreedyPermutationStrategy(IPermutationStrategy):
         GEMM-friendly layouts, and recursively plans compatible layouts for all other tensors
         in the contraction tree such that the top k do not need to be permuted.
 
+        The complexity is O(n_tensors * path_length + Σ (tensor_i_indices * log(tensor_i_indices))).
+
         Args:
             network (TensorNetwork): The input tensor network.
             contraction_path (ContractionPath): The contraction path.
