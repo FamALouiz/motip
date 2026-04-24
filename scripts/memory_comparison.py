@@ -10,11 +10,10 @@ from __future__ import annotations
 import argparse
 import csv
 import inspect
-import multiprocessing as mp
 import os
 import sys
 from collections import defaultdict
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from dataclasses import dataclass, field
 from pathlib import Path
 
 import cotengra as ctg
@@ -28,94 +27,48 @@ DEFAULT_OUTPUT_DIR = ROOT / "data" / "memory_strategies_comparison"
 if str(SRC) not in sys.path:
     sys.path.insert(0, str(SRC))
 
-from permutation.strategy import IPermutationStrategy  # noqa: I001, E402
-from permutation.strategy.canonical_contracted_first import (  # noqa: I001, E402
+from sweep_script import AbstractSweepScript  # noqa: E402
+
+from permutation.strategy import IPermutationStrategy  # noqa: E402
+from permutation.strategy.canonical_contracted_first import (  # noqa: E402
     CanonicalContractedFirstPermutationStrategy,
 )
-from permutation.strategy.canonical_free_first import (  # noqa: I001, E402
+from permutation.strategy.canonical_free_first import (  # noqa: E402
     CanonicalFreeFirstPermutationStrategy,
-)  # noqa: I001, E402
-from permutation.strategy.greedy import GreedyPermutationStrategy  # noqa: I001, E402
-from permutation.strategy.local_optimal import LocalOptimalPermutationStrategy  # noqa: I001, E402
-from permutation.strategy.next_use_aware import NextUseAwarePermutationStrategy  # noqa: I001, E402
-from permutation.strategy.preserve_layout import PreserveLayoutPermutationStrategy  # noqa: I001, E402
-from tensor_network.utils.random import generate_random_tn  # noqa: I001, E402
+)
+from permutation.strategy.greedy import GreedyPermutationStrategy  # noqa: E402
+from permutation.strategy.local_optimal import LocalOptimalPermutationStrategy  # noqa: E402
+from permutation.strategy.next_use_aware import NextUseAwarePermutationStrategy  # noqa: E402
+from permutation.strategy.preserve_layout import (  # noqa: E402
+    PreserveLayoutPermutationStrategy,
+)
+from tensor_network.utils.random import generate_random_tn  # noqa: E402
 
 SweepKey = tuple[int, int, int, int, int, str]
-WorkItem = tuple[int, int, int, int, int]
 PartialAggregate = dict[SweepKey, tuple[int, int]]
+Row = dict[str, float | int | str]
 
 
-def parse_args() -> argparse.Namespace:
-    """Parse command-line arguments for sweep configuration."""
-    parser = argparse.ArgumentParser(
-        description=(
-            "Compare all permutation strategies by averaging memory metrics over "
-            "seed sweeps for each tensor network size."
-        )
-    )
-    parser.add_argument("--seed-start", type=int, default=5, help="Inclusive initial seed.")
-    parser.add_argument("--seed-end", type=int, default=50, help="Inclusive final seed.")
-    parser.add_argument("--size-start", type=int, default=5, help="Inclusive initial size.")
-    parser.add_argument("--size-end", type=int, default=20, help="Inclusive final size.")
-    parser.add_argument(
-        "--average-rank-start",
-        type=int,
-        default=3,
-        help="Minimum average tensor rank for generated random tensor networks.",
-    )
-    parser.add_argument(
-        "--average-rank-end",
-        type=int,
-        default=3,
-        help="Maximum average tensor rank for generated random tensor networks.",
-    )
-    parser.add_argument(
-        "--max-dim-start",
-        type=int,
-        default=8,
-        help="Minimum maximum dimension size for generated tensor indices.",
-    )
-    parser.add_argument(
-        "--max-dim-end",
-        type=int,
-        default=8,
-        help="Maximum dimension size for generated tensor indices.",
-    )
-    parser.add_argument(
-        "--num-output-indices-start",
-        type=int,
-        default=2,
-        help="Minimum number of output indices in the generated tensor network.",
-    )
-    parser.add_argument(
-        "--num-output-indices-end",
-        type=int,
-        default=2,
-        help="Number of output indices in the generated tensor network.",
-    )
-    parser.add_argument(
-        "--output-dir",
-        type=Path,
-        default=DEFAULT_OUTPUT_DIR,
-        help="Directory for CSV and graphs.",
-    )
-    parser.add_argument(
-        "--show",
-        action="store_true",
-        help="Display plots interactively in addition to saving them.",
-    )
-    parser.add_argument(
-        "--num-workers",
-        type=int,
-        default=1,
-        help="Number of worker processes for --parallel mode (default: CPU count).",
-    )
-    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose mode.")
-    return parser.parse_args()
+@dataclass(frozen=True)
+class MemoryComparisonWorkItem:
+    """Independent work item for the strategy comparison sweep."""
+
+    size: int
+    seed: int
+    average_rank: int
+    max_dim: int
+    num_output_indices: int
 
 
-def get_strategies() -> list[IPermutationStrategy]:
+@dataclass
+class MemoryComparisonAggregate:
+    """Aggregate state for the strategy comparison sweep."""
+
+    peak_values: dict[SweepKey, int] = field(default_factory=dict)
+    total_values: dict[SweepKey, int] = field(default_factory=dict)
+
+
+def get_strategies() -> list[type[IPermutationStrategy]]:
     """Return all permutation strategies in this repository."""
     return [
         GreedyPermutationStrategy,
@@ -128,7 +81,7 @@ def get_strategies() -> list[IPermutationStrategy]:
     ]
 
 
-def strategy_kwargs(strategy_cls: IPermutationStrategy, seed: int) -> dict[str, int]:
+def strategy_kwargs(strategy_cls: type[IPermutationStrategy], seed: int) -> dict[str, int]:
     """Provide kwargs for strategies that accept optional seed parameters."""
     kwargs: dict[str, int] = {}
     peak_sig = inspect.signature(strategy_cls.get_peak_memory)
@@ -138,99 +91,23 @@ def strategy_kwargs(strategy_cls: IPermutationStrategy, seed: int) -> dict[str, 
     return kwargs
 
 
-def validate_ranges(args: argparse.Namespace) -> None:
-    """Validate seed and size sweep ranges."""
-    if args.seed_start > args.seed_end:
-        raise ValueError("seed-start must be <= seed-end")
-    if args.size_start > args.size_end:
-        raise ValueError("size-start must be <= size-end")
-    if args.size_start < 2:
-        raise ValueError("size-start must be >= 2")
-    if args.average_rank_start > args.average_rank_end:
-        raise ValueError("average-rank-start must be <= average-rank-end")
-    if args.max_dim_start > args.max_dim_end:
-        raise ValueError("max-dim-start must be <= max-dim-end")
-    if args.num_output_indices_start > args.num_output_indices_end:
-        raise ValueError("num-output-indices-start must be <= num-output-indices-end")
-    if args.num_workers is not None and args.num_workers < 1:
-        raise ValueError("num-workers must be >= 1")
-
-
-def create_work_items(args: argparse.Namespace) -> list[WorkItem]:
-    """Build independent work items for dynamic scheduling across processes."""
-    sizes = range(args.size_start, args.size_end + 1)
-    seeds = range(args.seed_start, args.seed_end + 1)
-    average_ranks = range(args.average_rank_start, args.average_rank_end + 1)
-    max_dims = range(args.max_dim_start, args.max_dim_end + 1)
-    num_output_indices_list = range(args.num_output_indices_start, args.num_output_indices_end + 1)
-
-    work_items: list[WorkItem] = []
-    for size in sizes:
-        for seed in seeds:
-            for average_rank in average_ranks:
-                for max_dim in max_dims:
-                    for num_output_indices in num_output_indices_list:
-                        work_items.append((size, seed, average_rank, max_dim, num_output_indices))
-    return work_items
-
-
-def evaluate_work_item(item: WorkItem) -> PartialAggregate:
-    """Evaluate all strategies for a single sweep item and return partial sums."""
-    size, seed, average_rank, max_dim, num_output_indices = item
-    tn = generate_random_tn(
-        num_tensors=size,
-        average_rank=average_rank,
-        max_dim=max_dim,
-        seed=seed,
-        generate_arrays=False,
-        num_output_indices=num_output_indices,
-    )
-    contraction_tree = ctg.array_contract_tree(
-        inputs=tn.input_indices,
-        output=tn.output_indices,
-        size_dict=tn.size_dict,
-        shapes=tn.shapes,
-    )
-    path = contraction_tree.get_path()
-
-    partial: PartialAggregate = {}
-    for strategy_cls in get_strategies():
-        kwargs = strategy_kwargs(strategy_cls, seed)
-        peak_memory = strategy_cls.get_peak_memory(tn, path, **kwargs)
-        total_memory = strategy_cls.get_total_memory(tn, path, **kwargs)
-        key: SweepKey = (
-            size,
-            seed,
-            average_rank,
-            max_dim,
-            num_output_indices,
-            strategy_cls.__name__,  # type: ignore[attr-defined]
-        )
-        partial[key] = (peak_memory.to_bytes, total_memory.to_bytes)
-    return partial
-
-
 def build_rows_from_aggregates(
     args: argparse.Namespace,
-    strategies: list[IPermutationStrategy],
+    strategies: list[type[IPermutationStrategy]],
     peak_values: dict[SweepKey, int],
     total_values: dict[SweepKey, int],
-) -> list[dict[str, float | int | str]]:
+) -> list[Row]:
     """Build final output rows from accumulated memory values."""
-    sizes = range(args.size_start, args.size_end + 1)
-    seeds = range(args.seed_start, args.seed_end + 1)
-    average_ranks = range(args.average_rank_start, args.average_rank_end + 1)
-    max_dims = range(args.max_dim_start, args.max_dim_end + 1)
-    num_output_indices_list = range(args.num_output_indices_start, args.num_output_indices_end + 1)
-
-    rows: list[dict[str, float | int | str]] = []
-    for size in sizes:
-        for seed in seeds:
-            for average_rank in average_ranks:
-                for max_dim in max_dims:
-                    for num_output_indices in num_output_indices_list:
+    rows: list[Row] = []
+    for size in range(args.size_start, args.size_end + 1):
+        for seed in range(args.seed_start, args.seed_end + 1):
+            for average_rank in range(args.average_rank_start, args.average_rank_end + 1):
+                for max_dim in range(args.max_dim_start, args.max_dim_end + 1):
+                    for num_output_indices in range(
+                        args.num_output_indices_start, args.num_output_indices_end + 1
+                    ):
                         for strategy_cls in strategies:
-                            strategy_name = strategy_cls.__name__  # type: ignore[attr-defined]
+                            strategy_name = strategy_cls.__name__
                             key: SweepKey = (
                                 size,
                                 seed,
@@ -256,124 +133,7 @@ def build_rows_from_aggregates(
     return rows
 
 
-def run_sweep(args: argparse.Namespace) -> list[dict[str, float | int | str]]:
-    """Execute the configured size/seed sweep and return averaged rows."""
-    strategies = get_strategies()
-    sizes = range(args.size_start, args.size_end + 1)
-    seeds = range(args.seed_start, args.seed_end + 1)
-    average_ranks = range(args.average_rank_start, args.average_rank_end + 1)
-    max_dims = range(args.max_dim_start, args.max_dim_end + 1)
-    num_output_indices_list = range(args.num_output_indices_start, args.num_output_indices_end + 1)
-
-    peak_values: dict[tuple[int, int, int, int, int, str], int] = {}
-    total_values: dict[tuple[int, int, int, int, int, str], int] = {}
-
-    print(f"\n{'=' * 60}")
-    print(
-        f"Sweeping from size {args.size_start} to {args.size_end}\n"
-        f"with seeds {args.seed_start}..{args.seed_end}\n"
-        f"with average rank {args.average_rank_start}..{args.average_rank_end}\n"
-        f"with max dim {args.max_dim_start}..{args.max_dim_end}\n"
-        f"with num output indices {args.num_output_indices_start}..{args.num_output_indices_end}\n"
-        f"and strategies {[cls.__name__ for cls in strategies]}"  # type: ignore[attr-defined]
-    )
-
-    for size in sizes:
-        print("Processing size:", size)
-        for seed in seeds:
-            for average_rank in average_ranks:
-                for max_dim in max_dims:
-                    for num_output_indices in num_output_indices_list:
-                        if args.verbose:
-                            print(f"\n{'=' * 60}")
-                            print(
-                                f"Sweeping size {size}\n"
-                                f"with seed {seed}\n"
-                                f"with average rank {average_rank}\n"
-                                f"with max dim {max_dim}\n"
-                                f"with num output indices {num_output_indices}"
-                            )
-                        tn = generate_random_tn(
-                            num_tensors=size,
-                            average_rank=average_rank,
-                            max_dim=max_dim,
-                            seed=seed,
-                            generate_arrays=False,
-                            num_output_indices=num_output_indices,
-                        )
-                        contraction_tree = ctg.array_contract_tree(
-                            inputs=tn.input_indices,
-                            output=tn.output_indices,
-                            size_dict=tn.size_dict,
-                            shapes=tn.shapes,
-                        )
-                        path = contraction_tree.get_path()
-
-                        for strategy_cls in strategies:
-                            kwargs = strategy_kwargs(strategy_cls, seed)
-                            peak_memory = strategy_cls.get_peak_memory(tn, path, **kwargs)
-                            total_memory = strategy_cls.get_total_memory(tn, path, **kwargs)
-                            key = (
-                                size,
-                                seed,
-                                average_rank,
-                                max_dim,
-                                num_output_indices,
-                                strategy_cls.__name__,  # type: ignore[attr-defined]
-                            )
-                            peak_values[key] = peak_memory.to_bytes
-                            total_values[key] = total_memory.to_bytes
-
-    return build_rows_from_aggregates(args, strategies, peak_values, total_values)
-
-
-def run_sweep_parallel(args: argparse.Namespace) -> list[dict[str, float | int | str]]:
-    """Execute the configured sweep in parallel and return averaged rows."""
-    strategies = get_strategies()
-    work_items = create_work_items(args)
-    max_workers = args.num_workers or os.cpu_count() or 1
-
-    peak_values: dict[SweepKey, int] = {}
-    total_values: dict[SweepKey, int] = {}
-    failed_items: list[WorkItem] = []
-
-    print(f"\n{'=' * 60}")
-    print(
-        f"Running parallel sweep with {max_workers} workers\n"
-        f"Total work items: {len(work_items)}\n"
-        f"and strategies {[cls.__name__ for cls in strategies]}"  # type: ignore[attr-defined]
-    )
-
-    mp_context = mp.get_context("spawn")
-    with ProcessPoolExecutor(max_workers=max_workers, mp_context=mp_context) as executor:
-        futures = {executor.submit(evaluate_work_item, item): item for item in work_items}
-
-        for completed, future in enumerate(as_completed(futures), start=1):
-            item = futures[future]
-            try:
-                partial = future.result()
-            except Exception as exc:
-                failed_items.append(item)
-                if args.verbose:
-                    print(f"Failed item {item}: {exc}")
-                continue
-
-            for key, (peak_val, total_val) in partial.items():
-                peak_values[key] = peak_val
-                total_values[key] = total_val
-
-            if args.verbose and completed % (len(work_items) // 100) == 0:
-                print(f"Completed {completed / len(work_items) * 100:.1f}% of work items", end="\r")
-
-    if failed_items:
-        print(f"Warning: {len(failed_items)} work items failed and were skipped.")
-        preview = failed_items[:5]
-        print(f"First failed items: {preview}")
-
-    return build_rows_from_aggregates(args, strategies, peak_values, total_values)
-
-
-def write_csv(rows: list[dict[str, float | int | str]], output_dir: Path) -> Path:
+def write_csv(rows: list[Row], output_dir: Path) -> Path:
     """Write aggregated sweep results to CSV."""
     output_dir.mkdir(parents=True, exist_ok=True)
     csv_path = output_dir / "data.csv"
@@ -397,7 +157,7 @@ def write_csv(rows: list[dict[str, float | int | str]], output_dir: Path) -> Pat
 
 
 def build_line_plot(
-    rows: list[dict[str, float | int | str]],
+    rows: list[Row],
     metric: str,
     title: str,
     ylabel: str,
@@ -445,7 +205,7 @@ def build_line_plot(
 
 
 def build_overlapping_bar_plot(
-    rows: list[dict[str, float | int | str]],
+    rows: list[Row],
     metric: str,
     title: str,
     ylabel: str,
@@ -502,7 +262,7 @@ def build_overlapping_bar_plot(
 
 
 def build_comaprison_with_preserve_layout_plot(
-    rows: list[dict[str, float | int | str]],
+    rows: list[Row],
     metric: str,
     title: str,
     ylabel: str,
@@ -573,10 +333,204 @@ def build_comaprison_with_preserve_layout_plot(
     plt.close()
 
 
+class MemoryComparisonScript(
+    AbstractSweepScript[
+        MemoryComparisonWorkItem,
+        PartialAggregate,
+        MemoryComparisonAggregate,
+        list[Row],
+    ]
+):
+    """Sweep runner for the permutation strategy comparison script."""
+
+    description = (
+        "Compare all permutation strategies by averaging memory metrics over "
+        "seed sweeps for each tensor network size."
+    )
+
+    def configure_parser(self, parser: argparse.ArgumentParser) -> None:
+        """Configure script-specific command-line arguments."""
+        parser.add_argument("--seed-start", type=int, default=5, help="Inclusive initial seed.")
+        parser.add_argument("--seed-end", type=int, default=50, help="Inclusive final seed.")
+        parser.add_argument("--size-start", type=int, default=5, help="Inclusive initial size.")
+        parser.add_argument("--size-end", type=int, default=20, help="Inclusive final size.")
+        parser.add_argument(
+            "--average-rank-start",
+            type=int,
+            default=3,
+            help="Minimum average tensor rank for generated random tensor networks.",
+        )
+        parser.add_argument(
+            "--average-rank-end",
+            type=int,
+            default=3,
+            help="Maximum average tensor rank for generated random tensor networks.",
+        )
+        parser.add_argument(
+            "--max-dim-start",
+            type=int,
+            default=8,
+            help="Minimum maximum dimension size for generated tensor indices.",
+        )
+        parser.add_argument(
+            "--max-dim-end",
+            type=int,
+            default=8,
+            help="Maximum dimension size for generated tensor indices.",
+        )
+        parser.add_argument(
+            "--num-output-indices-start",
+            type=int,
+            default=2,
+            help="Minimum number of output indices in the generated tensor network.",
+        )
+        parser.add_argument(
+            "--num-output-indices-end",
+            type=int,
+            default=2,
+            help="Number of output indices in the generated tensor network.",
+        )
+        parser.add_argument(
+            "--output-dir",
+            type=Path,
+            default=DEFAULT_OUTPUT_DIR,
+            help="Directory for CSV and graphs.",
+        )
+        parser.add_argument(
+            "--show",
+            action="store_true",
+            help="Display plots interactively in addition to saving them.",
+        )
+        parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose mode.")
+
+    def validate_args(self, args: argparse.Namespace) -> None:
+        """Validate seed and size sweep ranges."""
+        if args.seed_start > args.seed_end:
+            raise ValueError("seed-start must be <= seed-end")
+        if args.size_start > args.size_end:
+            raise ValueError("size-start must be <= size-end")
+        if args.size_start < 2:
+            raise ValueError("size-start must be >= 2")
+        if args.average_rank_start > args.average_rank_end:
+            raise ValueError("average-rank-start must be <= average-rank-end")
+        if args.max_dim_start > args.max_dim_end:
+            raise ValueError("max-dim-start must be <= max-dim-end")
+        if args.num_output_indices_start > args.num_output_indices_end:
+            raise ValueError("num-output-indices-start must be <= num-output-indices-end")
+
+    def create_work_items(self, args: argparse.Namespace) -> list[MemoryComparisonWorkItem]:
+        """Build independent work items for dynamic scheduling across processes."""
+        work_items: list[MemoryComparisonWorkItem] = []
+        for size in range(args.size_start, args.size_end + 1):
+            for seed in range(args.seed_start, args.seed_end + 1):
+                for average_rank in range(args.average_rank_start, args.average_rank_end + 1):
+                    for max_dim in range(args.max_dim_start, args.max_dim_end + 1):
+                        for num_output_indices in range(
+                            args.num_output_indices_start, args.num_output_indices_end + 1
+                        ):
+                            work_items.append(
+                                MemoryComparisonWorkItem(
+                                    size=size,
+                                    seed=seed,
+                                    average_rank=average_rank,
+                                    max_dim=max_dim,
+                                    num_output_indices=num_output_indices,
+                                )
+                            )
+        return work_items
+
+    @staticmethod
+    def evaluate_work_item(item: MemoryComparisonWorkItem) -> PartialAggregate:
+        """Evaluate all strategies for a single sweep item and return partial sums."""
+        tn = generate_random_tn(
+            num_tensors=item.size,
+            average_rank=item.average_rank,
+            max_dim=item.max_dim,
+            seed=item.seed,
+            generate_arrays=False,
+            num_output_indices=item.num_output_indices,
+        )
+        contraction_tree = ctg.array_contract_tree(
+            inputs=tn.input_indices,
+            output=tn.output_indices,
+            size_dict=tn.size_dict,
+            shapes=tn.shapes,
+        )
+        path = contraction_tree.get_path()
+
+        partial: PartialAggregate = {}
+        for strategy_cls in get_strategies():
+            kwargs = strategy_kwargs(strategy_cls, item.seed)
+            peak_memory = strategy_cls.get_peak_memory(tn, path, **kwargs)
+            total_memory = strategy_cls.get_total_memory(tn, path, **kwargs)
+            key: SweepKey = (
+                item.size,
+                item.seed,
+                item.average_rank,
+                item.max_dim,
+                item.num_output_indices,
+                strategy_cls.__name__,
+            )
+            partial[key] = (peak_memory.to_bytes, total_memory.to_bytes)
+        return partial
+
+    def create_aggregate(self) -> MemoryComparisonAggregate:
+        """Create the aggregate state used during the sweep."""
+        return MemoryComparisonAggregate()
+
+    def consume_work_result(
+        self,
+        aggregate: MemoryComparisonAggregate,
+        result: PartialAggregate,
+    ) -> None:
+        """Merge one completed work item into the aggregate state."""
+        for key, (peak_val, total_val) in result.items():
+            aggregate.peak_values[key] = peak_val
+            aggregate.total_values[key] = total_val
+
+    def build_output(
+        self,
+        aggregate: MemoryComparisonAggregate,
+        args: argparse.Namespace,
+    ) -> list[Row]:
+        """Build final rows from the aggregated memory values."""
+        return build_rows_from_aggregates(
+            args,
+            get_strategies(),
+            aggregate.peak_values,
+            aggregate.total_values,
+        )
+
+    def continue_on_error(self, args: argparse.Namespace) -> bool:
+        """Preserve the previous parallel behavior of skipping failed work items."""
+        return self.should_run_parallel(args)
+
+    def describe_run(
+        self,
+        args: argparse.Namespace,
+        work_items: list[MemoryComparisonWorkItem],
+        parallel: bool,
+        max_workers: int,
+    ) -> str:
+        """Describe the configured sweep before it starts."""
+        mode = "parallel" if parallel else "sequential"
+        return (
+            f"Running {mode} strategy comparison sweep\n"
+            f"Total work items: {len(work_items)}\n"
+            f"Sizes: {args.size_start}..{args.size_end}\n"
+            f"Seeds: {args.seed_start}..{args.seed_end}\n"
+            f"Average rank: {args.average_rank_start}..{args.average_rank_end}\n"
+            f"Max dim: {args.max_dim_start}..{args.max_dim_end}\n"
+            f"Num output indices: {args.num_output_indices_start}..{args.num_output_indices_end}\n"
+            f"Workers: {max_workers}\n"
+            f"Strategies: {[cls.__name__ for cls in get_strategies()]}"
+        )
+
+
 def main() -> None:
     """Run the sweep, export CSV, and save strategy-comparison line graphs."""
-    args = parse_args()
-    validate_ranges(args)
+    script = MemoryComparisonScript()
+    args = script.parse_args()
 
     encoded_folder_name = (
         f"{args.size_start}_{args.size_end}_"
@@ -591,10 +545,7 @@ def main() -> None:
         print("A similar sweep already exists.")
         sys.exit(1)
 
-    if args.num_workers != 1:
-        rows = run_sweep_parallel(args)
-    else:
-        rows = run_sweep(args)
+    rows = script.run(args)
 
     csv_path = write_csv(rows, folder_path)
     os.makedirs(folder_path, exist_ok=True)
