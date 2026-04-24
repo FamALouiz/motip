@@ -92,7 +92,7 @@ def _get_largest_intermediate_tensor_in_persistent_contraction_path(
     largest_step_idx = -1  # -1 indicates largest tensor is from original network
 
     for step_idx in range(path.num_steps):
-        current_network = path.get_state(step_idx)
+        current_network = path.get_state(step_idx + 1)
         _, step_largest_memory = get_largest_tensor_in_network(current_network)
         if step_largest_memory > largest_memory:
             largest_memory = step_largest_memory
