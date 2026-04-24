@@ -7,6 +7,7 @@ from contraction.tensor_network import contract_tensors_in_network
 from memory.calculator import MemoryCalculator
 from memory.utils import (
     get_largest_intermediate_tensor_in_path,
+    get_largest_k_intermediate_tensors_in_path,
     get_largest_k_tensors_in_network,
     get_largest_tensor_in_network,
 )
@@ -93,24 +94,9 @@ class TestLargestKTensorsInNetwork:
 class TestLargestIntermediateTensorInContractionPath:
     """Tests for get_largest_intermediate_tensor_in_contraction_path behavior."""
 
-    @pytest.mark.parametrize(
-        "path",
-        [
-            [(1, 2), (0, 1)],
-            PersistentContractionPath.from_contraction_path(
-                TensorNetwork(
-                    input_indices=[[0, 1], [1, 2], [2, 3]],
-                    output_indices=[0, 3],
-                    shapes=[(10, 10), (10, 2), (2, 2)],
-                    size_dict={0: 10, 1: 10, 2: 2, 3: 2},
-                    tensor_arrays=None,
-                ),
-                [(1, 2), (0, 1)],
-            ),
-        ],
-    )
+    @pytest.mark.parametrize("use_persistent_path", [False, True])
     def test_returns_minus_one_when_largest_tensor_is_initial(
-        self, path: PersistentContractionPath | ContractionPath
+        self, use_persistent_path: bool
     ) -> None:
         """Test largest tensor being one of the original tensors."""
         network = TensorNetwork(
@@ -120,30 +106,20 @@ class TestLargestIntermediateTensorInContractionPath:
             size_dict={0: 10, 1: 10, 2: 2, 3: 2},
             tensor_arrays=None,
         )
+        contraction_path: ContractionPath = [(1, 2), (0, 1)]
+        path: PersistentContractionPath | ContractionPath = contraction_path
+        if use_persistent_path:
+            path = PersistentContractionPath.from_contraction_path(network, contraction_path)
+
         largest_idx, largest_memory = get_largest_intermediate_tensor_in_path(network, path)
 
         expected_memory = MemoryCalculator().calculate_memory_for_tensor(network.tensors[0])
         assert largest_idx == -1
         assert largest_memory == expected_memory
 
-    @pytest.mark.parametrize(
-        "path",
-        [
-            [(0, 1), (0, 1)],
-            PersistentContractionPath.from_contraction_path(
-                TensorNetwork(
-                    input_indices=[[0, 1], [2, 3], [1, 2]],
-                    output_indices=[0, 3],
-                    shapes=[(10, 10), (8, 8), (10, 8)],
-                    size_dict={0: 10, 1: 10, 2: 8, 3: 8},
-                    tensor_arrays=None,
-                ),
-                [(0, 1), (0, 1)],
-            ),
-        ],
-    )
+    @pytest.mark.parametrize("use_persistent_path", [False, True])
     def test_returns_intermediate_step_when_largest_tensor_is_intermediate(
-        self, path: PersistentContractionPath | ContractionPath
+        self, use_persistent_path: bool
     ) -> None:
         """Test largest tensor being created at a non-final contraction step."""
         network = TensorNetwork(
@@ -153,6 +129,10 @@ class TestLargestIntermediateTensorInContractionPath:
             size_dict={0: 10, 1: 10, 2: 8, 3: 8},
             tensor_arrays=None,
         )
+        contraction_path: ContractionPath = [(0, 1), (0, 1)]
+        path: PersistentContractionPath | ContractionPath = contraction_path
+        if use_persistent_path:
+            path = PersistentContractionPath.from_contraction_path(network, contraction_path)
 
         largest_idx, largest_memory = get_largest_intermediate_tensor_in_path(network, path)
 
@@ -163,24 +143,9 @@ class TestLargestIntermediateTensorInContractionPath:
         assert largest_idx == 0
         assert largest_memory == expected_memory
 
-    @pytest.mark.parametrize(
-        "path",
-        [
-            [(0, 1), (0, 1)],
-            PersistentContractionPath.from_contraction_path(
-                TensorNetwork(
-                    input_indices=[[0, 1], [1, 2], [3, 4]],
-                    output_indices=[0, 2, 3, 4],
-                    shapes=[(10, 2), (2, 10), (9, 9)],
-                    size_dict={0: 10, 1: 2, 2: 10, 3: 9, 4: 9},
-                    tensor_arrays=None,
-                ),
-                [(0, 1), (0, 1)],
-            ),
-        ],
-    )
+    @pytest.mark.parametrize("use_persistent_path", [False, True])
     def test_returns_last_step_when_largest_tensor_is_final_tensor(
-        self, path: PersistentContractionPath | ContractionPath
+        self, use_persistent_path: bool
     ) -> None:
         """Test largest tensor being the final tensor after all contractions."""
         network = TensorNetwork(
@@ -190,6 +155,11 @@ class TestLargestIntermediateTensorInContractionPath:
             size_dict={0: 10, 1: 2, 2: 10, 3: 9, 4: 9},
             tensor_arrays=None,
         )
+        contraction_path: ContractionPath = [(0, 1), (0, 1)]
+        path: PersistentContractionPath | ContractionPath = contraction_path
+        if use_persistent_path:
+            path = PersistentContractionPath.from_contraction_path(network, contraction_path)
+
         largest_idx, largest_memory = get_largest_intermediate_tensor_in_path(network, path)
 
         after_first_contraction = contract_tensors_in_network(network, (0, 1))
