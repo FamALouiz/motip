@@ -7,6 +7,7 @@ from contraction.tensor_network import contract_tensors_in_network
 from memory.calculator import MemoryCalculator
 from memory.utils import (
     get_largest_intermediate_tensor_in_path,
+    get_largest_k_tensors_in_network,
     get_largest_tensor_in_network,
 )
 from tensor_network import TensorNetwork
@@ -49,10 +50,44 @@ class TestLargestTensorInNetwork:
             tensor_arrays=None,
         )
 
-        with pytest.raises(
-            AssertionError, match="Tensor network must contain at least one tensor."
-        ):
+        with pytest.raises(AssertionError, match="Tensor network must contain at least 1 tensors."):
             get_largest_tensor_in_network(empty_network)
+
+
+class TestLargestKTensorsInNetwork:
+    """Tests for get_largest_k_tensors_in_network behavior."""
+
+    @pytest.mark.parametrize(("k", "expected_largest_tensor_indices"), [(1, [1]), (2, [1, 2])])
+    def test_largest_k_tensors_in_network(
+        self, sample_network: TensorNetwork, k: int, expected_largest_tensor_indices: list[int]
+    ) -> None:
+        """Test that the largest k tensors in the network are correctly identified."""
+        expected_largest_memories = [
+            MemoryCalculator().calculate_memory_for_tensor(sample_network.tensors[idx])
+            for idx in expected_largest_tensor_indices
+        ]
+
+        largest_tensor_indices, largest_memories = get_largest_k_tensors_in_network(
+            sample_network, k
+        )
+
+        assert largest_tensor_indices == expected_largest_tensor_indices
+        assert largest_memories == expected_largest_memories
+
+    def test_largest_k_tensors_with_k_greater_than_num_tensors(
+        self, sample_network: TensorNetwork
+    ) -> None:
+        """Test that requesting more tensors than exist returns all tensors sorted by size."""
+        k = 10
+
+        with pytest.raises(AssertionError):
+            _, _ = get_largest_k_tensors_in_network(sample_network, k)
+
+    @pytest.mark.parametrize("k", [0, -1, 1.5])
+    def test_largest_k_tensors_with_invalid_k(self, sample_network: TensorNetwork, k: int) -> None:
+        """Test that requesting an invalid number of tensors raises an AssertionError."""
+        with pytest.raises(AssertionError):
+            _, _ = get_largest_k_tensors_in_network(sample_network, k)
 
 
 class TestLargestIntermediateTensorInContractionPath:
