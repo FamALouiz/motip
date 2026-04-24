@@ -10,29 +10,10 @@ from memory.memory import Memory
 from memory.utils import get_largest_intermediate_tensor_in_contraction_path
 from permutation import Permutation
 from permutation.strategy import IPermutationStrategy
+from permutation.strategy.common import build_tree_maps, get_step_tensors, sort_indices_by_size
 from permutation.utils import to_permutation
 from tensor import Tensor
 from tensor_network.tn import TensorNetwork
-
-
-def _sort_indices_by_size(indices: set[int] | list[int], size_dict: dict[int, int]) -> list[int]:
-    """Sort indices by their dimension sizes (smallest first)."""
-    return sorted(indices, key=lambda idx: size_dict[idx])
-
-
-def _get_step_tensors(
-    persistent_path: PersistentContractionPath, step: int
-) -> tuple[Tensor, Tensor, Tensor]:
-    """Get left, right, and result tensors for a contraction step."""
-    left_pos, right_pos = persistent_path.path[step]
-    before = persistent_path.get_state(step)
-    after = persistent_path.get_state(step + 1)
-
-    return (
-        before.tensors[left_pos],
-        before.tensors[right_pos],
-        after.tensors[left_pos],
-    )
 
 
 def _get_node_tensor(
@@ -49,7 +30,7 @@ def _get_node_tensor(
     if contraction_step is None:
         raise ValueError("Internal node must define a contraction step.")
 
-    _, _, result = _get_step_tensors(
+    _, _, result = get_step_tensors(
         persistent_path,
         contraction_step,
     )
@@ -106,22 +87,6 @@ def _select_slice_indices_for_interleaving(
     return sliced
 
 
-def _node_walk(root: ContractionTreeNode) -> list[ContractionTreeNode]:
-    """Return all nodes in the contraction tree using DFS order."""
-    stack = [root]
-    nodes: list[ContractionTreeNode] = []
-    while stack:
-        node = stack.pop()
-        nodes.append(node)
-        left = node.left
-        right = node.right
-        if right is not None:
-            stack.append(right)
-        if left is not None:
-            stack.append(left)
-    return nodes
-
-
 def _find_peak_target_layout(
     tree: ContractionTree,
     persistent_path: PersistentContractionPath,
@@ -141,19 +106,19 @@ def _find_peak_target_layout(
     )
 
     if peak_parent is None:
-        return _sort_indices_by_size(
+        return sort_indices_by_size(
             set(peak_tensor.input_indices),
             size_dict,
         )
 
     parent_step = peak_parent.contraction_step
     if parent_step is None:
-        return _sort_indices_by_size(
+        return sort_indices_by_size(
             set(peak_tensor.input_indices),
             size_dict,
         )
 
-    left_tensor, right_tensor, _ = _get_step_tensors(
+    left_tensor, right_tensor, _ = get_step_tensors(
         persistent_path,
         parent_step,
     )
@@ -163,8 +128,8 @@ def _find_peak_target_layout(
 
     contracted = get_contracted_indices(peak_tensor_at_parent, sibling_tensor)
     free = set(peak_tensor_at_parent.input_indices) - contracted
-    free_sorted = _sort_indices_by_size(free, size_dict)
-    contracted_sorted = _sort_indices_by_size(contracted, size_dict)
+    free_sorted = sort_indices_by_size(free, size_dict)
+    contracted_sorted = sort_indices_by_size(contracted, size_dict)
 
     if is_left_child:
         return free_sorted + contracted_sorted
@@ -213,18 +178,10 @@ class GreedyPermutationStrategy(IPermutationStrategy):
         intermediate_permutations: list[Permutation] = []
 
         for step in range(persistent_path.num_steps):
-            _, _, result_tensor = _get_step_tensors(persistent_path, step)
+            _, _, result_tensor = get_step_tensors(persistent_path, step)
             intermediate_permutations.append(tuple(range(len(result_tensor.input_indices))))
 
-        step_to_node: dict[int, ContractionTreeNode] = {}
-        leaf_to_node: dict[int, ContractionTreeNode] = {}
-        for node in _node_walk(contraction_tree.root):
-            contraction_step = node.contraction_step
-            leaf_pos = node.initial_tensor_position
-            if contraction_step is not None:
-                step_to_node[contraction_step] = node
-            if leaf_pos is not None:
-                leaf_to_node[leaf_pos] = node
+        _, step_to_node, leaf_to_node = build_tree_maps(persistent_path)
 
         largest_step_idx, _ = get_largest_intermediate_tensor_in_contraction_path(
             network,
@@ -277,7 +234,7 @@ class GreedyPermutationStrategy(IPermutationStrategy):
             if left_node is None or right_node is None or step is None:
                 return
 
-            left_tensor, right_tensor, result_tensor = _get_step_tensors(
+            left_tensor, right_tensor, result_tensor = get_step_tensors(
                 persistent_path,
                 step,
             )
@@ -285,7 +242,7 @@ class GreedyPermutationStrategy(IPermutationStrategy):
             contracted = get_contracted_indices(left_tensor, right_tensor)
             left_free = set(left_tensor.input_indices) - contracted
             right_free = set(right_tensor.input_indices) - contracted
-            contracted_sorted = _sort_indices_by_size(
+            contracted_sorted = sort_indices_by_size(
                 contracted,
                 network.size_dict,
             )
@@ -297,10 +254,10 @@ class GreedyPermutationStrategy(IPermutationStrategy):
                     idx for idx in desired_layout if idx in left_free or idx in right_free
                 ]
             else:
-                desired_free = _sort_indices_by_size(
+                desired_free = sort_indices_by_size(
                     left_free,
                     network.size_dict,
-                ) + _sort_indices_by_size(
+                ) + sort_indices_by_size(
                     right_free,
                     network.size_dict,
                 )
@@ -323,19 +280,19 @@ class GreedyPermutationStrategy(IPermutationStrategy):
             left_remaining = left_free - left_sliced
             right_remaining = right_free - right_sliced
 
-            left_sliced_sorted = _sort_indices_by_size(
+            left_sliced_sorted = sort_indices_by_size(
                 left_sliced,
                 network.size_dict,
             )
-            right_sliced_sorted = _sort_indices_by_size(
+            right_sliced_sorted = sort_indices_by_size(
                 right_sliced,
                 network.size_dict,
             )
-            left_remaining_sorted = _sort_indices_by_size(
+            left_remaining_sorted = sort_indices_by_size(
                 left_remaining,
                 network.size_dict,
             )
-            right_remaining_sorted = _sort_indices_by_size(
+            right_remaining_sorted = sort_indices_by_size(
                 right_remaining,
                 network.size_dict,
             )
