@@ -1,13 +1,51 @@
 """Utility functions for memory operations."""
 
 from copy import deepcopy
-from typing import overload
+from heapq import nlargest
+from typing import Collection, overload
+
+from more_itertools import one
 
 from contraction.path import ContractionPath, PersistentContractionPath
 from contraction.tensor_network import contract_tensors_in_network
 from memory.calculator import MemoryCalculator
 from memory.memory import Memory
 from tensor_network import TensorNetwork
+
+
+def get_largest_k_tensors_in_network(
+    network: TensorNetwork, k: int
+) -> tuple[Collection[int], Collection[Memory]]:
+    """Get the memory requirements of the largest k tensors in a tensor network.
+
+    Args:
+        network: The tensor network to analyze.
+        k: The number of largest tensors to retrieve.
+
+    Returns:
+        A tuple containing the indices of the largest k tensors and their memory requirements.
+
+    Raises:
+        AssertionError: If the tensor network is empty or if k is not a positive integer.
+    """
+    assert k > 0, "k must be a positive integer."
+    assert isinstance(k, int), "k must be an integer."
+    assert len(network.tensors) >= k, f"Tensor network must contain at least {k} tensors."
+
+    idx_by_tensor = {}
+    for i, tensor in enumerate(network.tensors):
+        idx_by_tensor[id(tensor)] = i
+
+    largest_k_tensors = nlargest(
+        k, network.tensors, key=MemoryCalculator().calculate_memory_for_tensor
+    )
+
+    largest_tensor_indices = [idx_by_tensor[id(tensor)] for tensor in largest_k_tensors]
+    largest_memories = [
+        MemoryCalculator().calculate_memory_for_tensor(tensor) for tensor in largest_k_tensors
+    ]
+
+    return largest_tensor_indices, largest_memories
 
 
 def get_largest_tensor_in_network(network: TensorNetwork) -> tuple[int, Memory]:
@@ -22,15 +60,8 @@ def get_largest_tensor_in_network(network: TensorNetwork) -> tuple[int, Memory]:
     Raises:
         AssertionError: If the tensor network is empty.
     """
-    assert network.tensors, "Tensor network must contain at least one tensor."
-    largest_memory = MemoryCalculator().calculate_memory_for_tensor(network.tensors[0])
-    largest_tensor_idx = 0
-    for i, tensor in enumerate(network.tensors):
-        tensor_memory = MemoryCalculator().calculate_memory_for_tensor(tensor)
-        if tensor_memory > largest_memory:
-            largest_memory = tensor_memory
-            largest_tensor_idx = i
-    return largest_tensor_idx, largest_memory
+    largest_tensor_indices, largest_memories = get_largest_k_tensors_in_network(network, k=1)
+    return one(largest_tensor_indices), one(largest_memories)
 
 
 @overload
