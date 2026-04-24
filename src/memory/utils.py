@@ -1,8 +1,9 @@
 """Utility functions for memory operations."""
 
 from copy import deepcopy
+from typing import overload
 
-from contraction.path import ContractionPath
+from contraction.path import ContractionPath, PersistentContractionPath
 from contraction.tensor_network import contract_tensors_in_network
 from memory.calculator import MemoryCalculator
 from memory.memory import Memory
@@ -32,8 +33,16 @@ def get_largest_tensor_in_network(network: TensorNetwork) -> tuple[int, Memory]:
     return largest_tensor_idx, largest_memory
 
 
-def get_largest_intermediate_tensor_in_contraction_path(
+@overload
+def get_largest_intermediate_tensor_in_path(
     network: TensorNetwork, path: ContractionPath
+) -> tuple[int, Memory]: ...
+@overload
+def get_largest_intermediate_tensor_in_path(
+    network: TensorNetwork, path: PersistentContractionPath
+) -> tuple[int, Memory]: ...
+def get_largest_intermediate_tensor_in_path(
+    network: TensorNetwork, path: ContractionPath | PersistentContractionPath
 ) -> tuple[int, Memory]:
     """Get the memory requirements of the largest intermediate tensor in a contraction path.
 
@@ -50,6 +59,15 @@ def get_largest_intermediate_tensor_in_contraction_path(
         requirements. If the index is -1, it indicates that the largest tensor is one of the
         original tensors in the network.
     """
+    if isinstance(path, PersistentContractionPath):
+        return _get_largest_intermediate_tensor_in_persistent_contraction_path(network, path)
+    else:
+        return _get_largest_intermediate_tensor_in_contraction_path(network, path)
+
+
+def _get_largest_intermediate_tensor_in_contraction_path(
+    network: TensorNetwork, path: ContractionPath
+) -> tuple[int, Memory]:
     _, largest_memory = get_largest_tensor_in_network(network)
     largest_contraction_step_idx = -1  # -1 indicates largest tensor is from the original network
     intermediate_network = deepcopy(network)
@@ -64,3 +82,19 @@ def get_largest_intermediate_tensor_in_contraction_path(
             largest_contraction_step_idx = contraction_idx
 
     return largest_contraction_step_idx, largest_memory
+
+
+def _get_largest_intermediate_tensor_in_persistent_contraction_path(
+    network: TensorNetwork, path: PersistentContractionPath
+) -> tuple[int, Memory]:
+    current_network = deepcopy(network)
+    largest_memory = MemoryCalculator().calculate_memory_for_tensor(current_network.tensors[0])
+    largest_step_idx = -1  # -1 indicates largest tensor is from original network
+
+    for step_idx in range(path.num_steps):
+        current_network = path.get_state(step_idx)
+        _, step_largest_memory = get_largest_tensor_in_network(current_network)
+        if step_largest_memory > largest_memory:
+            largest_memory = step_largest_memory
+            largest_step_idx = step_idx
+    return largest_step_idx, largest_memory
