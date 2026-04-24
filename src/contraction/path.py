@@ -24,9 +24,9 @@ class PersistentContractionPath:
                 "History must contain the initial state and one state per contraction."
             )
 
-    @classmethod
+    @staticmethod
     def from_contraction_path(
-        cls, network: TensorNetwork, contraction_path: ContractionPath
+        network: TensorNetwork, contraction_path: ContractionPath
     ) -> "PersistentContractionPath":
         """Create contraction history by simulating all contractions in order."""
         path = list(contraction_path)
@@ -37,7 +37,7 @@ class PersistentContractionPath:
             current_network = contract_tensors_in_network(current_network, pair)
             history.append(current_network)
 
-        return cls(path=path, history=history)
+        return PersistentContractionPath(path=path, history=history)
 
     def get_state(self, step: int) -> TensorNetwork:
         """Get the tensor network state at a given step.
