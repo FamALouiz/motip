@@ -88,7 +88,6 @@ def _select_slice_indices_for_interleaving(
 
 
 def _find_peak_target_layout(
-    tree: ContractionTree,
     persistent_path: PersistentContractionPath,
     peak_node: ContractionTreeNode,
     size_dict: dict[int, int],
@@ -198,7 +197,6 @@ class GreedyPermutationStrategy(IPermutationStrategy):
 
         desired_layout_by_node_id: dict[int, list[int]] = {
             id(peak_node): _find_peak_target_layout(
-                contraction_tree,
                 persistent_path,
                 peak_node,
                 network.size_dict,
