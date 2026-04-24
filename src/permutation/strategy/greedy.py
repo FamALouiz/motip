@@ -170,21 +170,22 @@ class GreedyPermutationStrategy(IPermutationStrategy):
                 - The first list contains the optimal permutations for the initial tensors.
                 - The second list contains the optimal permutations for the intermediate tensors
         """
-        persistent_path = PersistentContractionPath.from_contraction_path(
-            network, contraction_path
-        )  # path_length * n_tensors
+        persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
         contraction_tree = ContractionTree.from_contraction_path(persistent_path)
 
         initial_permutations: list[Permutation] = [
             tuple(range(len(tensor.input_indices))) for tensor in network.tensors
-        ]  # n_tensors
+        ]
         intermediate_permutations: list[Permutation] = []
 
-        for step in range(persistent_path.num_steps):  # path_length
+        if persistent_path.num_steps == 0:
+            return initial_permutations, intermediate_permutations
+
+        for step in range(persistent_path.num_steps):
             _, _, result_tensor = get_step_tensors(persistent_path, step)
             intermediate_permutations.append(tuple(range(len(result_tensor.input_indices))))
 
-        _, step_to_node, leaf_to_node = build_tree_maps(persistent_path)  # n_tensors
+        _, leaf_to_node, step_to_node = build_tree_maps(persistent_path)
 
         largest_step_idx, _ = get_largest_intermediate_tensor_in_path(
             network,
