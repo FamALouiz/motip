@@ -37,6 +37,7 @@ class AbstractSweepScript(ABC, Generic[WorkItemT, WorkResultT, AggregateT, Outpu
             default=1,
             help="Number of worker processes. Use 1 for sequential execution.",
         )
+        parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose mode.")
 
     def parse_args(self) -> argparse.Namespace:
         """Parse command-line arguments."""

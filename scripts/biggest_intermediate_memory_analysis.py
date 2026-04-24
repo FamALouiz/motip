@@ -276,7 +276,6 @@ class BiggestIntermediateMemoryAnalysisScript(
         parser.add_argument("--num-output-indices-end", type=int, default=2)
         parser.add_argument("--strategy", type=str, default="local_optimal")
         parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
-        parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose mode.")
 
     def validate_args(self, args: argparse.Namespace) -> None:
         """Validate CLI arguments."""

@@ -401,7 +401,6 @@ class MemoryComparisonScript(
             action="store_true",
             help="Display plots interactively in addition to saving them.",
         )
-        parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose mode.")
 
     def validate_args(self, args: argparse.Namespace) -> None:
         """Validate seed and size sweep ranges."""
