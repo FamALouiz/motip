@@ -65,6 +65,40 @@ def get_largest_tensor_in_network(network: TensorNetwork) -> tuple[int, Memory]:
 
 
 @overload
+def get_largest_k_intermediate_tensors_in_path(
+    network: TensorNetwork, path: ContractionPath, k: int
+) -> tuple[Collection[int], Collection[Memory]]: ...
+@overload
+def get_largest_k_intermediate_tensors_in_path(
+    network: TensorNetwork, path: PersistentContractionPath, k: int
+) -> tuple[Collection[int], Collection[Memory]]: ...
+def get_largest_k_intermediate_tensors_in_path(
+    network: TensorNetwork, path: ContractionPath | PersistentContractionPath, k: int
+) -> tuple[Collection[int], Collection[Memory]]:
+    """Get the memory requirements of the largest k intermediate tensors in a contraction path.
+
+    Args:
+        network: The tensor network to analyze.
+        path: A list of pairs of tensor indices that are contracted together.
+        k: The number of largest intermediate tensors to retrieve.
+
+    Returns:
+        A tuple containing the contraction step indices that created the largest intermediate
+        tensors and their memory requirements. If an index is -1, it indicates the tensor is one
+        of the original tensors in the network.
+
+    Raises:
+        AssertionError: If k is not a positive integer or there are fewer than k candidate tensors.
+    """
+    assert k > 0, "k must be a positive integer."
+    assert isinstance(k, int), "k must be an integer."
+
+    if isinstance(path, PersistentContractionPath):
+        return _get_largest_k_intermediate_tensors_in_persistent_contraction_path(network, path, k)
+    return _get_largest_k_intermediate_tensors_in_contraction_path(network, path, k)
+
+
+@overload
 def get_largest_intermediate_tensor_in_path(
     network: TensorNetwork, path: ContractionPath
 ) -> tuple[int, Memory]: ...
@@ -90,42 +124,56 @@ def get_largest_intermediate_tensor_in_path(
         requirements. If the index is -1, it indicates that the largest tensor is one of the
         original tensors in the network.
     """
-    if isinstance(path, PersistentContractionPath):
-        return _get_largest_intermediate_tensor_in_persistent_contraction_path(network, path)
-    else:
-        return _get_largest_intermediate_tensor_in_contraction_path(network, path)
+    largest_step_indices, largest_memories = get_largest_k_intermediate_tensors_in_path(
+        network, path, k=1
+    )
+    return one(largest_step_indices), one(largest_memories)
 
 
-def _get_largest_intermediate_tensor_in_contraction_path(
-    network: TensorNetwork, path: ContractionPath
-) -> tuple[int, Memory]:
-    _, largest_memory = get_largest_tensor_in_network(network)
-    largest_contraction_step_idx = -1  # -1 indicates largest tensor is from the original network
-    intermediate_network = deepcopy(network)
-
-    for contraction_idx, contraction_pair in enumerate(path):
-        intermediate_network = contract_tensors_in_network(intermediate_network, contraction_pair)
-        intermediate_tensor = intermediate_network.tensors[contraction_pair[0]]
-        intermediate_memory = MemoryCalculator().calculate_memory_for_tensor(intermediate_tensor)
-
-        if intermediate_memory > largest_memory:
-            largest_memory = intermediate_memory
-            largest_contraction_step_idx = contraction_idx
-
-    return largest_contraction_step_idx, largest_memory
-
-
-def _get_largest_intermediate_tensor_in_persistent_contraction_path(
-    network: TensorNetwork, path: PersistentContractionPath
-) -> tuple[int, Memory]:
+def _get_largest_k_intermediate_tensors_in_contraction_path(
+    network: TensorNetwork, path: ContractionPath, k: int
+) -> tuple[Collection[int], Collection[Memory]]:
+    calculator = MemoryCalculator()
+    intermediate_tensors = [
+        (-1, calculator.calculate_memory_for_tensor(tensor)) for tensor in network.tensors
+    ]
     current_network = deepcopy(network)
-    largest_memory = MemoryCalculator().calculate_memory_for_tensor(current_network.tensors[0])
-    largest_step_idx = -1  # -1 indicates largest tensor is from original network
 
-    for step_idx in range(path.num_steps):
+    for step_idx, contraction_pair in enumerate(path):
+        current_network = contract_tensors_in_network(current_network, contraction_pair)
+        intermediate_tensor = current_network.tensors[contraction_pair[0]]
+        intermediate_tensors.append(
+            (step_idx, calculator.calculate_memory_for_tensor(intermediate_tensor))
+        )
+
+    return _get_largest_k_intermediate_tensors(intermediate_tensors, k)
+
+
+def _get_largest_k_intermediate_tensors_in_persistent_contraction_path(
+    network: TensorNetwork, path: PersistentContractionPath, k: int
+) -> tuple[Collection[int], Collection[Memory]]:
+    calculator = MemoryCalculator()
+    intermediate_tensors = [
+        (-1, calculator.calculate_memory_for_tensor(tensor)) for tensor in network.tensors
+    ]
+
+    for step_idx, contraction_pair in enumerate(path.path):
         current_network = path.get_state(step_idx + 1)
-        _, step_largest_memory = get_largest_tensor_in_network(current_network)
-        if step_largest_memory > largest_memory:
-            largest_memory = step_largest_memory
-            largest_step_idx = step_idx
-    return largest_step_idx, largest_memory
+        intermediate_tensor = current_network.tensors[contraction_pair[0]]
+        intermediate_tensors.append(
+            (step_idx, calculator.calculate_memory_for_tensor(intermediate_tensor))
+        )
+
+    return _get_largest_k_intermediate_tensors(intermediate_tensors, k)
+
+
+def _get_largest_k_intermediate_tensors(
+    intermediate_tensors: list[tuple[int, Memory]], k: int
+) -> tuple[Collection[int], Collection[Memory]]:
+    assert len(intermediate_tensors) >= k, f"Tensor network must contain at least {k} tensors."
+
+    largest_k_intermediate_tensors = nlargest(k, intermediate_tensors, key=lambda item: item[1])
+    largest_step_indices = [step_idx for step_idx, _ in largest_k_intermediate_tensors]
+    largest_memories = [memory for _, memory in largest_k_intermediate_tensors]
+
+    return largest_step_indices, largest_memories
