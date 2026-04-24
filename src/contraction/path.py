@@ -70,3 +70,7 @@ class PersistentContractionPath:
     def num_steps(self) -> int:
         """Number of contraction steps."""
         return len(self.path)
+
+    def __len__(self) -> int:
+        """Length of the contraction path."""
+        return len(self.path)
