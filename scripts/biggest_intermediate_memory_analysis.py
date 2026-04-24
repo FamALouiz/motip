@@ -1,4 +1,4 @@
-"""Script to analyze the impact of permuting the largest intermediate tensor on memory usage."""
+"""Script to analyze the impact of ignoring the permutation of the largest intermediate tensors."""
 
 from __future__ import annotations
 
@@ -7,6 +7,7 @@ import csv
 import inspect
 import os
 import sys
+from heapq import nlargest
 from pathlib import Path
 from typing import Any
 
@@ -22,16 +23,13 @@ if str(SRC) not in sys.path:
 
 from contraction.path import ContractionPath, PersistentContractionPath  # noqa: E402
 from memory.calculator.calculator import MemoryCalculator  # noqa: E402
-from memory.utils import (  # noqa: E402
-    get_largest_intermediate_tensor_in_path,
-    get_largest_tensor_in_network,
-)
 from tensor_network.tn import TensorNetwork  # noqa: E402
 from tensor_network.utils.random import generate_random_tn  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:  # noqa: D103
     parser = argparse.ArgumentParser()
+    parser.add_argument("--largest-k", type=int, default=1)
     parser.add_argument("--seed-start", type=int, default=0)
     parser.add_argument("--seed-end", type=int, default=10)
     parser.add_argument("--size-start", type=int, default=5)
@@ -48,12 +46,16 @@ def parse_args() -> argparse.Namespace:  # noqa: D103
 
 
 def validate_args(args: argparse.Namespace) -> None:  # noqa: D103
+    if args.largest_k < 1:
+        raise ValueError("largest-k must be >= 1")
     if args.seed_start > args.seed_end:
         raise ValueError("seed-start must be <= seed-end")
     if args.size_start > args.size_end:
         raise ValueError("size-start must be <= size-end")
     if args.size_start < 2:
         raise ValueError("size-start must be >= 2")
+    if args.largest_k > args.size_start - 1:
+        raise ValueError("largest-k must be <= size-start - 1")
     if args.average_rank_start > args.average_rank_end:
         raise ValueError("average-rank-start must be <= average-rank-end")
     if args.max_dim_start > args.max_dim_end:
@@ -70,22 +72,40 @@ def strategy_find_kwargs(strategy_cls: Any, seed: int) -> dict[str, int]:  # noq
     return kwargs
 
 
+def get_largest_k_created_intermediate_tensors_in_path(
+    network: TensorNetwork,
+    contraction_path: ContractionPath,
+    k: int,
+) -> tuple[list[int], list[int]]:
+    """Return the contraction steps and memory of the largest created intermediates."""
+    calculator = MemoryCalculator()
+    persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
+    intermediate_tensors: list[tuple[int, int]] = []
+
+    for step_idx, contraction_pair in enumerate(contraction_path):
+        result_tensor = persistent_path.get_state(step_idx + 1).tensors[contraction_pair[0]]
+        intermediate_tensors.append(
+            (step_idx, calculator.calculate_memory_for_tensor(result_tensor).to_bytes)
+        )
+
+    largest_k_intermediate_tensors = nlargest(k, intermediate_tensors, key=lambda item: item[1])
+    largest_step_indices = [step_idx for step_idx, _ in largest_k_intermediate_tensors]
+    largest_memories = [memory for _, memory in largest_k_intermediate_tensors]
+    return largest_step_indices, largest_memories
+
+
 def simulate_memory(  # noqa: D103
     network: TensorNetwork,
     contraction_path: ContractionPath,
-    skip_largest: bool,
+    ignored_intermediate_steps: set[int] | None = None,
 ) -> tuple[int, int]:
     calculator = MemoryCalculator()
     persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
+    ignored_intermediate_steps = ignored_intermediate_steps or set()
 
     current_memory = calculator.calculate_memory_for_tensors(network.tensors)
     peak_memory = current_memory
     total_memory_movement = 0
-
-    largest_step_idx, _ = get_largest_intermediate_tensor_in_path(network, contraction_path)
-    largest_initial_idx: int | None = None
-    if largest_step_idx < 0:
-        largest_initial_idx, _ = get_largest_tensor_in_network(network)
 
     live_sources: list[tuple[str, int]] = [("initial", i) for i in range(len(network.tensors))]
     initial_permutation_applied = [False for _ in network.tensors]
@@ -102,28 +122,16 @@ def simulate_memory(  # noqa: D103
         if left_source[0] == "initial":
             initial_idx = left_source[1]
             if not initial_permutation_applied[initial_idx]:
-                should_permute_initial = True
-                if skip_largest and largest_step_idx < 0 and initial_idx == largest_initial_idx:
-                    should_permute_initial = False
-
-                if should_permute_initial:
-                    peak_memory = max(peak_memory, current_memory + left_memory)
-                    total_memory_movement += left_memory.to_bytes + left_memory.to_bytes
-
+                peak_memory = max(peak_memory, current_memory + left_memory)
+                total_memory_movement += left_memory.to_bytes + left_memory.to_bytes
                 initial_permutation_applied[initial_idx] = True
 
         right_source = live_sources[right_pos]
         if right_source[0] == "initial":
             initial_idx = right_source[1]
             if not initial_permutation_applied[initial_idx]:
-                should_permute_initial = True
-                if skip_largest and largest_step_idx < 0 and initial_idx == largest_initial_idx:
-                    should_permute_initial = False
-
-                if should_permute_initial:
-                    peak_memory = max(peak_memory, current_memory + right_memory)
-                    total_memory_movement += right_memory.to_bytes + right_memory.to_bytes
-
+                peak_memory = max(peak_memory, current_memory + right_memory)
+                total_memory_movement += right_memory.to_bytes + right_memory.to_bytes
                 initial_permutation_applied[initial_idx] = True
 
         result_tensor = persistent_path.get_state(step + 1).tensors[left_pos]
@@ -136,11 +144,7 @@ def simulate_memory(  # noqa: D103
             left_memory.to_bytes + right_memory.to_bytes + result_memory.to_bytes
         )
 
-        should_permute_result = True
-        if skip_largest and step == largest_step_idx:
-            should_permute_result = False
-
-        if should_permute_result:
+        if step not in ignored_intermediate_steps:
             peak_memory = max(peak_memory, current_memory + result_memory)
             total_memory_movement += result_memory.to_bytes + result_memory.to_bytes
 
@@ -173,12 +177,12 @@ def run_sweep(  # noqa: D103
         print(f"Running size: {size} from seeds {args.seed_start} to {args.seed_end}")
         summary[size] = {
             "runs": 0,
-            "permute_peak_sum": 0.0,
-            "skip_peak_sum": 0.0,
+            "permute_all_peak_sum": 0.0,
+            "ignore_top_k_peak_sum": 0.0,
             "peak_diff_sum": 0.0,
             "peak_diff_pct_sum": 0.0,
-            "permute_total_sum": 0.0,
-            "skip_total_sum": 0.0,
+            "permute_all_total_sum": 0.0,
+            "ignore_top_k_total_sum": 0.0,
             "total_diff_sum": 0.0,
             "total_diff_pct_sum": 0.0,
         }
@@ -203,51 +207,60 @@ def run_sweep(  # noqa: D103
                         )
                         path = contraction_tree.get_path()
 
-                        largest_step_idx, _ = get_largest_intermediate_tensor_in_path(tn, path)
-
-                        permute_peak, permute_total = simulate_memory(
-                            tn,
-                            path,
-                            skip_largest=False,
-                        )
-                        skip_peak, skip_total = simulate_memory(
-                            tn,
-                            path,
-                            skip_largest=True,
+                        largest_step_idxs, largest_memories = (
+                            get_largest_k_created_intermediate_tensors_in_path(
+                                tn, path, k=args.largest_k
+                            )
                         )
 
-                        peak_diff = permute_peak - skip_peak
-                        total_diff = permute_total - skip_total
+                        permute_all_peak, permute_all_total = simulate_memory(
+                            tn,
+                            path,
+                        )
+                        ignore_top_k_peak, ignore_top_k_total = simulate_memory(
+                            tn,
+                            path,
+                            ignored_intermediate_steps=set(largest_step_idxs),
+                        )
 
-                        peak_diff_pct = percentage_delta(permute_peak, skip_peak)
-                        total_diff_pct = percentage_delta(permute_total, skip_total)
+                        peak_diff = permute_all_peak - ignore_top_k_peak
+                        total_diff = permute_all_total - ignore_top_k_total
+
+                        peak_diff_pct = percentage_delta(permute_all_peak, ignore_top_k_peak)
+                        total_diff_pct = percentage_delta(permute_all_total, ignore_top_k_total)
 
                         rows.append(
                             {
                                 "strategy": args.strategy,
+                                "largest_k": args.largest_k,
                                 "size": size,
                                 "seed": seed,
                                 "average_rank": average_rank,
                                 "max_dim": max_dim,
                                 "num_output_indices": num_output_indices,
-                                "largest_intermediate_step": largest_step_idx,
-                                "permute_largest_peak_bytes": permute_peak,
-                                "skip_largest_peak_bytes": skip_peak,
+                                "largest_intermediate_steps": "|".join(
+                                    str(step_idx) for step_idx in largest_step_idxs
+                                ),
+                                "largest_intermediate_memory_bytes": "|".join(
+                                    str(memory) for memory in largest_memories
+                                ),
+                                "permute_all_peak_bytes": permute_all_peak,
+                                "ignore_top_k_peak_bytes": ignore_top_k_peak,
                                 "peak_diff_bytes": peak_diff,
                                 "peak_diff_pct": peak_diff_pct,
-                                "permute_largest_total_bytes": permute_total,
-                                "skip_largest_total_bytes": skip_total,
+                                "permute_all_total_bytes": permute_all_total,
+                                "ignore_top_k_total_bytes": ignore_top_k_total,
                                 "total_diff_bytes": total_diff,
                                 "total_diff_pct": total_diff_pct,
                             }
                         )
 
                         summary[size]["runs"] = int(summary[size]["runs"]) + 1
-                        summary[size]["permute_peak_sum"] = (
-                            float(summary[size]["permute_peak_sum"]) + permute_peak
+                        summary[size]["permute_all_peak_sum"] = (
+                            float(summary[size]["permute_all_peak_sum"]) + permute_all_peak
                         )
-                        summary[size]["skip_peak_sum"] = (
-                            float(summary[size]["skip_peak_sum"]) + skip_peak
+                        summary[size]["ignore_top_k_peak_sum"] = (
+                            float(summary[size]["ignore_top_k_peak_sum"]) + ignore_top_k_peak
                         )
                         summary[size]["peak_diff_sum"] = (
                             float(summary[size]["peak_diff_sum"]) + peak_diff
@@ -255,11 +268,11 @@ def run_sweep(  # noqa: D103
                         summary[size]["peak_diff_pct_sum"] = (
                             float(summary[size]["peak_diff_pct_sum"]) + peak_diff_pct
                         )
-                        summary[size]["permute_total_sum"] = (
-                            float(summary[size]["permute_total_sum"]) + permute_total
+                        summary[size]["permute_all_total_sum"] = (
+                            float(summary[size]["permute_all_total_sum"]) + permute_all_total
                         )
-                        summary[size]["skip_total_sum"] = (
-                            float(summary[size]["skip_total_sum"]) + skip_total
+                        summary[size]["ignore_top_k_total_sum"] = (
+                            float(summary[size]["ignore_top_k_total_sum"]) + ignore_top_k_total
                         )
                         summary[size]["total_diff_sum"] = (
                             float(summary[size]["total_diff_sum"]) + total_diff
@@ -274,14 +287,16 @@ def run_sweep(  # noqa: D103
         summary_rows.append(
             {
                 "strategy": args.strategy,
+                "largest_k": args.largest_k,
                 "size": size,
                 "runs": runs,
-                "avg_permute_largest_peak_bytes": float(summary[size]["permute_peak_sum"]) / runs,
-                "avg_skip_largest_peak_bytes": float(summary[size]["skip_peak_sum"]) / runs,
+                "avg_permute_all_peak_bytes": float(summary[size]["permute_all_peak_sum"]) / runs,
+                "avg_ignore_top_k_peak_bytes": float(summary[size]["ignore_top_k_peak_sum"]) / runs,
                 "avg_peak_diff_bytes": float(summary[size]["peak_diff_sum"]) / runs,
                 "avg_peak_diff_pct": float(summary[size]["peak_diff_pct_sum"]) / runs,
-                "avg_permute_largest_total_bytes": float(summary[size]["permute_total_sum"]) / runs,
-                "avg_skip_largest_total_bytes": float(summary[size]["skip_total_sum"]) / runs,
+                "avg_permute_all_total_bytes": float(summary[size]["permute_all_total_sum"]) / runs,
+                "avg_ignore_top_k_total_bytes": float(summary[size]["ignore_top_k_total_sum"])
+                / runs,
                 "avg_total_diff_bytes": float(summary[size]["total_diff_sum"]) / runs,
                 "avg_total_diff_pct": float(summary[size]["total_diff_pct_sum"]) / runs,
             }
@@ -307,14 +322,15 @@ def build_plot(rows: list[dict[str, int | float | str]], output_path: Path) -> N
     sizes = [int(row["size"]) for row in ordered]
     peak_diff_pct = [float(row["avg_peak_diff_pct"]) for row in ordered]
     total_diff_pct = [float(row["avg_total_diff_pct"]) for row in ordered]
+    largest_k = int(rows[0]["largest_k"])
 
     plt.figure(figsize=(10, 6))
     plt.plot(sizes, peak_diff_pct, marker="o", linewidth=2, label="Peak memory change (%)")
     plt.plot(sizes, total_diff_pct, marker="s", linewidth=2, label="Total memory change (%)")
     plt.axhline(0, color="black", linestyle="--", linewidth=1)
     plt.xlabel("Tensor network size")
-    plt.ylabel("Difference when permuting largest intermediate tensor (%)")
-    plt.title("Impact of permuting largest intermediate tensor")
+    plt.ylabel(f"Difference when ignoring top {largest_k} intermediate tensors (%)")
+    plt.title(f"Impact of ignoring top {largest_k} intermediate tensors")
     plt.grid(True, alpha=0.3)
     plt.legend()
     plt.tight_layout()
@@ -328,6 +344,7 @@ def main() -> None:  # noqa: D103
     validate_args(args)
 
     encoded_folder_name = (
+        f"{args.largest_k}_"
         f"{args.size_start}_{args.size_end}_"
         f"{args.seed_start}_{args.seed_end}_"
         f"{args.average_rank_start}_{args.average_rank_end}_"
@@ -351,18 +368,20 @@ def main() -> None:  # noqa: D103
         rows,
         [
             "strategy",
+            "largest_k",
             "size",
             "seed",
             "average_rank",
             "max_dim",
             "num_output_indices",
-            "largest_intermediate_step",
-            "permute_largest_peak_bytes",
-            "skip_largest_peak_bytes",
+            "largest_intermediate_steps",
+            "largest_intermediate_memory_bytes",
+            "permute_all_peak_bytes",
+            "ignore_top_k_peak_bytes",
             "peak_diff_bytes",
             "peak_diff_pct",
-            "permute_largest_total_bytes",
-            "skip_largest_total_bytes",
+            "permute_all_total_bytes",
+            "ignore_top_k_total_bytes",
             "total_diff_bytes",
             "total_diff_pct",
         ],
@@ -373,14 +392,15 @@ def main() -> None:  # noqa: D103
         summary_rows,
         [
             "strategy",
+            "largest_k",
             "size",
             "runs",
-            "avg_permute_largest_peak_bytes",
-            "avg_skip_largest_peak_bytes",
+            "avg_permute_all_peak_bytes",
+            "avg_ignore_top_k_peak_bytes",
             "avg_peak_diff_bytes",
             "avg_peak_diff_pct",
-            "avg_permute_largest_total_bytes",
-            "avg_skip_largest_total_bytes",
+            "avg_permute_all_total_bytes",
+            "avg_ignore_top_k_total_bytes",
             "avg_total_diff_bytes",
             "avg_total_diff_pct",
         ],
