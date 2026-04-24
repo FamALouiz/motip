@@ -169,3 +169,53 @@ class TestLargestIntermediateTensorInContractionPath:
         )
         assert largest_idx == 1
         assert largest_memory == expected_memory
+
+
+class TestLargestKIntermediateTensorsInContractionPath:
+    """Tests for get_largest_k_intermediate_tensors_in_path behavior."""
+
+    @pytest.mark.parametrize("use_persistent_path", [False, True])
+    def test_largest_k_intermediate_tensors_in_path(self, use_persistent_path: bool) -> None:
+        """Test that the largest k intermediate tensors in a path are correctly identified."""
+        network = TensorNetwork(
+            input_indices=[[0, 1], [1, 2], [3, 4]],
+            output_indices=[0, 2, 3, 4],
+            shapes=[(10, 2), (2, 10), (9, 9)],
+            size_dict={0: 10, 1: 2, 2: 10, 3: 9, 4: 9},
+            tensor_arrays=None,
+        )
+        contraction_path: ContractionPath = [(0, 1), (0, 1)]
+        path: PersistentContractionPath | ContractionPath = contraction_path
+        if use_persistent_path:
+            path = PersistentContractionPath.from_contraction_path(network, contraction_path)
+
+        largest_step_indices, largest_memories = get_largest_k_intermediate_tensors_in_path(
+            network, path, k=2
+        )
+
+        after_first_contraction = contract_tensors_in_network(network, (0, 1))
+        after_second_contraction = contract_tensors_in_network(after_first_contraction, (0, 1))
+        expected_memories = [
+            MemoryCalculator().calculate_memory_for_tensor(after_second_contraction.tensors[0]),
+            MemoryCalculator().calculate_memory_for_tensor(after_first_contraction.tensors[0]),
+        ]
+
+        assert largest_step_indices == [1, 0]
+        assert largest_memories == expected_memories
+
+    @pytest.mark.parametrize("k", [0, -1, 1.5])
+    def test_largest_k_intermediate_tensors_with_invalid_k(
+        self, sample_network: TensorNetwork, k: int
+    ) -> None:
+        """Test that requesting an invalid number of tensors raises an AssertionError."""
+        with pytest.raises(AssertionError):
+            _, _ = get_largest_k_intermediate_tensors_in_path(sample_network, [(1, 2), (0, 1)], k)
+
+    def test_largest_k_intermediate_tensors_with_k_greater_than_num_candidates(
+        self, sample_network: TensorNetwork
+    ) -> None:
+        """Test that requesting more tensors than available raises an AssertionError."""
+        with pytest.raises(AssertionError):
+            _, _ = get_largest_k_intermediate_tensors_in_path(
+                sample_network, [(1, 2), (0, 1)], k=10
+            )
