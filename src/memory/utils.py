@@ -8,8 +8,8 @@ from more_itertools import one
 
 from contraction.path import ContractionPath, PersistentContractionPath
 from contraction.tensor_network import contract_tensors_in_network
+from memory import Memory
 from memory.calculator import MemoryCalculator
-from memory.memory import Memory
 from tensor_network import TensorNetwork
 
 

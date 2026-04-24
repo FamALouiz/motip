@@ -5,8 +5,8 @@ from typing import override
 from contraction.path import ContractionPath, PersistentContractionPath
 from contraction.tensor import get_contracted_indices
 from contraction.tree import ContractionTree, ContractionTreeNode
+from memory import Memory
 from memory.calculator.calculator import MemoryCalculator
-from memory.memory import Memory
 from memory.utils import get_largest_intermediate_tensor_in_path
 from permutation import Permutation
 from permutation.strategy import IPermutationStrategy

@@ -4,7 +4,7 @@ import math
 from typing import overload
 
 from contraction.tensor import get_contracted_indices
-from memory.memory import Memory
+from memory import Memory
 from tensor import Tensor
 from tensor_network.tn import _TensorPool
 

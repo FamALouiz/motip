@@ -3,8 +3,8 @@
 from typing import override
 
 from contraction.path import ContractionPath, PersistentContractionPath
+from memory import Memory
 from memory.calculator.calculator import MemoryCalculator
-from memory.memory import Memory
 from permutation import Permutation
 from permutation.strategy import IPermutationStrategy
 from permutation.utils import to_identity_permutation

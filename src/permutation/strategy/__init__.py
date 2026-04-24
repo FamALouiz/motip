@@ -3,7 +3,7 @@
 from typing import Protocol, runtime_checkable
 
 from contraction.path import ContractionPath
-from memory.memory import Memory
+from memory import Memory
 from permutation import Permutation
 from tensor_network.tn import TensorNetwork
 
