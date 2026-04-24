@@ -23,7 +23,7 @@ if str(SRC) not in sys.path:
 from contraction.path import ContractionPath, PersistentContractionPath  # noqa: E402
 from memory.calculator.calculator import MemoryCalculator  # noqa: E402
 from memory.utils import (  # noqa: E402
-    get_largest_intermediate_tensor_in_contraction_path,
+    get_largest_intermediate_tensor_in_path,
     get_largest_tensor_in_network,
 )
 from tensor_network.tn import TensorNetwork  # noqa: E402
@@ -82,9 +82,7 @@ def simulate_memory(  # noqa: D103
     peak_memory = current_memory
     total_memory_movement = 0
 
-    largest_step_idx, _ = get_largest_intermediate_tensor_in_contraction_path(
-        network, contraction_path
-    )
+    largest_step_idx, _ = get_largest_intermediate_tensor_in_path(network, contraction_path)
     largest_initial_idx: int | None = None
     if largest_step_idx < 0:
         largest_initial_idx, _ = get_largest_tensor_in_network(network)
@@ -205,9 +203,7 @@ def run_sweep(  # noqa: D103
                         )
                         path = contraction_tree.get_path()
 
-                        largest_step_idx, _ = get_largest_intermediate_tensor_in_contraction_path(
-                            tn, path
-                        )
+                        largest_step_idx, _ = get_largest_intermediate_tensor_in_path(tn, path)
 
                         permute_peak, permute_total = simulate_memory(
                             tn,

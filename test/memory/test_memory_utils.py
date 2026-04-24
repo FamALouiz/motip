@@ -5,7 +5,7 @@ import pytest
 from contraction.tensor_network import contract_tensors_in_network
 from memory.calculator import MemoryCalculator
 from memory.utils import (
-    get_largest_intermediate_tensor_in_contraction_path,
+    get_largest_intermediate_tensor_in_path,
     get_largest_tensor_in_network,
 )
 from tensor_network import TensorNetwork
@@ -68,9 +68,7 @@ class TestLargestIntermediateTensorInContractionPath:
         )
         path = [(1, 2), (0, 1)]
 
-        largest_idx, largest_memory = get_largest_intermediate_tensor_in_contraction_path(
-            network, path
-        )
+        largest_idx, largest_memory = get_largest_intermediate_tensor_in_path(network, path)
 
         expected_memory = MemoryCalculator().calculate_memory_for_tensor(network.tensors[0])
         assert largest_idx == -1
@@ -87,9 +85,7 @@ class TestLargestIntermediateTensorInContractionPath:
         )
         path = [(0, 1), (0, 1)]
 
-        largest_idx, largest_memory = get_largest_intermediate_tensor_in_contraction_path(
-            network, path
-        )
+        largest_idx, largest_memory = get_largest_intermediate_tensor_in_path(network, path)
 
         after_first_contraction = contract_tensors_in_network(network, path[0])
         expected_memory = MemoryCalculator().calculate_memory_for_tensor(
@@ -109,9 +105,7 @@ class TestLargestIntermediateTensorInContractionPath:
         )
         path = [(0, 1), (0, 1)]
 
-        largest_idx, largest_memory = get_largest_intermediate_tensor_in_contraction_path(
-            network, path
-        )
+        largest_idx, largest_memory = get_largest_intermediate_tensor_in_path(network, path)
 
         after_first_contraction = contract_tensors_in_network(network, path[0])
         after_second_contraction = contract_tensors_in_network(after_first_contraction, path[1])

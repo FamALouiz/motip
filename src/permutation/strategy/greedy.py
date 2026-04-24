@@ -7,7 +7,7 @@ from contraction.tensor import get_contracted_indices
 from contraction.tree import ContractionTree, ContractionTreeNode
 from memory.calculator.calculator import MemoryCalculator
 from memory.memory import Memory
-from memory.utils import get_largest_intermediate_tensor_in_contraction_path
+from memory.utils import get_largest_intermediate_tensor_in_path
 from permutation import Permutation
 from permutation.strategy import IPermutationStrategy
 from permutation.strategy.common import build_tree_maps, get_step_tensors, sort_indices_by_size
@@ -168,23 +168,25 @@ class GreedyPermutationStrategy(IPermutationStrategy):
                 - The first list contains the optimal permutations for the initial tensors.
                 - The second list contains the optimal permutations for the intermediate tensors
         """
-        persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
+        persistent_path = PersistentContractionPath.from_contraction_path(
+            network, contraction_path
+        )  # path_length * n_tensors
         contraction_tree = ContractionTree.from_contraction_path(persistent_path)
 
         initial_permutations: list[Permutation] = [
             tuple(range(len(tensor.input_indices))) for tensor in network.tensors
-        ]
+        ]  # n_tensors
         intermediate_permutations: list[Permutation] = []
 
-        for step in range(persistent_path.num_steps):
+        for step in range(persistent_path.num_steps):  # path_length
             _, _, result_tensor = get_step_tensors(persistent_path, step)
             intermediate_permutations.append(tuple(range(len(result_tensor.input_indices))))
 
-        _, step_to_node, leaf_to_node = build_tree_maps(persistent_path)
+        _, step_to_node, leaf_to_node = build_tree_maps(persistent_path)  # n_tensors
 
-        largest_step_idx, _ = get_largest_intermediate_tensor_in_contraction_path(
+        largest_step_idx, _ = get_largest_intermediate_tensor_in_path(
             network,
-            contraction_path,
+            persistent_path,
         )
         if largest_step_idx >= 0:
             peak_node = step_to_node[largest_step_idx]
@@ -342,9 +344,9 @@ class GreedyPermutationStrategy(IPermutationStrategy):
         memory_calculator = MemoryCalculator()
         current_memory = memory_calculator.calculate_memory_for_tensors(network.tensors)
         persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
-        _, largest_memory = get_largest_intermediate_tensor_in_contraction_path(
+        _, largest_memory = get_largest_intermediate_tensor_in_path(
             network,
-            contraction_path,
+            persistent_path,
         )
         result_memory = current_memory
 
