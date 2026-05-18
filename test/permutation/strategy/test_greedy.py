@@ -109,7 +109,7 @@ class TestGreedyPermutationStrategy:
         )
 
         assert initial_perms == [(2, 0, 1), (0, 1), (0, 1)]
-        assert intermediate_perms == [(1, 0, 2), (1, 0, 2)]
+        assert intermediate_perms == [(1, 0, 2), (0, 1, 2)]
 
     def test_find_optimal_permutation_single_tensor_network(self) -> None:
         """A network with no contractions keeps the identity layout."""

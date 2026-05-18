@@ -4,13 +4,18 @@ from typing import override
 
 from contraction.path import ContractionPath, PersistentContractionPath
 from contraction.tensor import get_contracted_indices
-from contraction.tree import ContractionTree, ContractionTreeNode
+from contraction.tree import ContractionTreeNode
 from memory import Memory
 from memory.calculator.calculator import MemoryCalculator
 from memory.utils import get_largest_intermediate_tensor_in_path
 from permutation import Permutation
 from permutation.strategy import IPermutationStrategy
-from permutation.strategy.common import build_tree_maps, get_step_tensors, sort_indices_by_size
+from permutation.strategy.common import (
+    build_tree_maps,
+    get_step_tensors,
+    sort_indices_by_layout,
+    sort_indices_by_size,
+)
 from permutation.utils import to_permutation
 from tensor import Tensor
 from tensor_network.tn import TensorNetwork
@@ -122,11 +127,10 @@ def _find_peak_target_layout(
         parent_step,
     )
     is_left_child = peak_parent.left is peak_node
-    peak_tensor_at_parent = left_tensor if is_left_child else right_tensor
     sibling_tensor = right_tensor if is_left_child else left_tensor
 
-    contracted = get_contracted_indices(peak_tensor_at_parent, sibling_tensor)
-    free = set(peak_tensor_at_parent.input_indices) - contracted
+    contracted = get_contracted_indices(peak_tensor, sibling_tensor)
+    free = set(peak_tensor.input_indices) - contracted
     free_sorted = sort_indices_by_size(free, size_dict)
     contracted_sorted = sort_indices_by_size(contracted, size_dict)
 
@@ -171,7 +175,6 @@ class GreedyPermutationStrategy(IPermutationStrategy):
                 - The second list contains the optimal permutations for the intermediate tensors
         """
         persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
-        contraction_tree = ContractionTree.from_contraction_path(persistent_path)
 
         initial_permutations: list[Permutation] = [
             tuple(range(len(tensor.input_indices))) for tensor in network.tensors
@@ -185,7 +188,7 @@ class GreedyPermutationStrategy(IPermutationStrategy):
             _, _, result_tensor = get_step_tensors(persistent_path, step)
             intermediate_permutations.append(tuple(range(len(result_tensor.input_indices))))
 
-        _, leaf_to_node, step_to_node = build_tree_maps(persistent_path)
+        contraction_tree, leaf_to_node, step_to_node = build_tree_maps(persistent_path)
 
         largest_step_idx, _ = get_largest_intermediate_tensor_in_path(
             network,
@@ -291,13 +294,13 @@ class GreedyPermutationStrategy(IPermutationStrategy):
                 right_sliced,
                 network.size_dict,
             )
-            left_remaining_sorted = sort_indices_by_size(
+            left_remaining_sorted = sort_indices_by_layout(
                 left_remaining,
-                network.size_dict,
+                desired_free,
             )
-            right_remaining_sorted = sort_indices_by_size(
+            right_remaining_sorted = sort_indices_by_layout(
                 right_remaining,
-                network.size_dict,
+                desired_free,
             )
 
             left_target = left_sliced_sorted + left_remaining_sorted + contracted_sorted
