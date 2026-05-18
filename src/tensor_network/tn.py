@@ -87,6 +87,9 @@ class _TensorPool:
         else:
             return NotImplemented
 
+    def __str__(self) -> str:
+        return str([tensor for tensor in self.__pool])
+
 
 @dataclass(init=False)
 class TensorNetwork:
