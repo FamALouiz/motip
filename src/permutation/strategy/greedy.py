@@ -281,6 +281,13 @@ class GreedyPermutationStrategy(IPermutationStrategy):
             step_to_node,
             k,
         )
+
+        for node in peak_nodes:
+            if node.is_leaf:
+                raise NotImplementedError(
+                    "Greedy strategy does not currently support freezing leaf nodes."
+                )
+
         frozen_node_ids = {id(node) for node in peak_nodes}
         desired_layout_by_node_id: dict[int, list[int]] = {}
         for node in peak_nodes:
@@ -360,7 +367,6 @@ class GreedyPermutationStrategy(IPermutationStrategy):
                     left_free,
                     right_free,
                 )
-                print(sliced_indices)
 
             left_sliced = sliced_indices & left_free
             right_sliced = sliced_indices & right_free
