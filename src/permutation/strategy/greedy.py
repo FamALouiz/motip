@@ -7,7 +7,11 @@ from contraction.tensor import get_contracted_indices
 from contraction.tree import ContractionTreeNode
 from memory import Memory
 from memory.calculator.calculator import MemoryCalculator
-from memory.utils import get_largest_intermediate_tensor_in_path
+from memory.utils import (
+    get_largest_intermediate_tensor_in_path,
+    get_largest_k_intermediate_tensors_in_path,
+    get_largest_k_tensors_in_network,
+)
 from permutation import Permutation
 from permutation.strategy import IPermutationStrategy
 from permutation.strategy.common import (
@@ -140,6 +144,59 @@ def _find_peak_target_layout(
     return contracted_sorted + free_sorted
 
 
+def _find_top_k_peak_nodes(
+    network: TensorNetwork,
+    persistent_path: PersistentContractionPath,
+    leaf_to_node: dict[int, ContractionTreeNode],
+    step_to_node: dict[int, ContractionTreeNode],
+    k: int,
+) -> list[ContractionTreeNode]:
+    candidate_count = len(network.tensors) + persistent_path.num_steps
+    k = min(k, candidate_count)
+
+    original_indices, original_memories = get_largest_k_tensors_in_network(
+        network, len(network.tensors)
+    )
+    intermediate_step_indices, intermediate_memories = get_largest_k_intermediate_tensors_in_path(
+        network,
+        persistent_path,
+        candidate_count,
+    )
+
+    candidates: list[tuple[ContractionTreeNode, Memory]] = []
+    candidates.extend(
+        (leaf_to_node[idx], memory) for idx, memory in zip(original_indices, original_memories)
+    )
+    for step_idx, memory in zip(intermediate_step_indices, intermediate_memories):
+        if step_idx == -1:
+            continue
+        candidate = step_to_node.get(step_idx)
+        if candidate is not None:
+            candidates.append((candidate, memory))
+
+    candidates.sort(key=lambda item: item[1], reverse=True)
+
+    selected: list[ContractionTreeNode] = []
+    seen_ids: set[int] = set()
+    for node, _ in candidates:
+        node_id = id(node)
+        if node_id in seen_ids:
+            continue
+        selected.append(node)
+        seen_ids.add(node_id)
+        if len(selected) == k:
+            break
+
+    if not selected:
+        largest_initial_idx = max(
+            range(len(network.tensors)),
+            key=lambda i: max(network.tensors[i].shape) if network.tensors[i].shape else 1,
+        )
+        selected.append(leaf_to_node[largest_initial_idx])
+
+    return selected
+
+
 class GreedyPermutationStrategy(IPermutationStrategy):
     """Greedy strategy for finding optimal tensor permutations for a contraction path."""
 
@@ -174,6 +231,13 @@ class GreedyPermutationStrategy(IPermutationStrategy):
                 - The first list contains the optimal permutations for the initial tensors.
                 - The second list contains the optimal permutations for the intermediate tensors
         """
+        if k <= 0:
+            raise ValueError("k must be a positive integer.")
+        if k > len(network.tensors) + len(contraction_path):
+            raise ValueError(
+                "k must not exceed the total number of tensors (initial tensors and intermediate "
+                "tensors produced)"
+            )
         persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
 
         initial_permutations: list[Permutation] = [
@@ -190,25 +254,21 @@ class GreedyPermutationStrategy(IPermutationStrategy):
 
         contraction_tree, leaf_to_node, step_to_node = build_tree_maps(persistent_path)
 
-        largest_step_idx, _ = get_largest_intermediate_tensor_in_path(
+        peak_nodes = _find_top_k_peak_nodes(
             network,
             persistent_path,
+            leaf_to_node,
+            step_to_node,
+            k,
         )
-        if largest_step_idx >= 0:
-            peak_node = step_to_node[largest_step_idx]
-        else:
-            largest_initial_idx = max(
-                range(len(network.tensors)),
-                key=lambda i: max(network.tensors[i].shape) if network.tensors[i].shape else 1,
-            )
-            peak_node = leaf_to_node[largest_initial_idx]
-
+        frozen_node_ids = {id(node) for node in peak_nodes}
         desired_layout_by_node_id: dict[int, list[int]] = {
-            id(peak_node): _find_peak_target_layout(
+            id(node): _find_peak_target_layout(
                 persistent_path,
-                peak_node,
+                node,
                 network.size_dict,
             )
+            for node in peak_nodes
         }
 
         def __set_node_layout(node: ContractionTreeNode, target_layout: list[int]) -> None:
@@ -312,12 +372,12 @@ class GreedyPermutationStrategy(IPermutationStrategy):
                 + right_remaining_sorted
             )
 
-            if id(left_node) != id(peak_node):
+            if id(left_node) not in frozen_node_ids:
                 __set_node_layout(left_node, left_target)
-            if id(right_node) != id(peak_node):
+            if id(right_node) not in frozen_node_ids:
                 __set_node_layout(right_node, right_target)
 
-            if id(node) != id(peak_node):
+            if id(node) not in frozen_node_ids:
                 intermediate_permutations[step] = to_permutation(
                     result_tensor.input_indices,
                     result_target,
