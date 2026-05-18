@@ -100,11 +100,12 @@ def _find_peak_target_layout(
     persistent_path: PersistentContractionPath,
     peak_node: ContractionTreeNode,
     size_dict: dict[int, int],
+    desired_layout_by_node_id: dict[int, list[int]] | None = None,
 ) -> list[int]:
     """Infer the target layout for the peak tensor using its ancestor contraction.
 
-    If the peak is not a leaf/root, we inspect its immediate parent contraction and
-    place free and contracted indices in GEMM-friendly groups.
+    If the peak has a parent contraction, the layout is derived from the parent
+    contraction and, where available, from previously computed desired layouts.
     """
     peak_parent = peak_node.parent
     peak_tensor = _get_node_tensor(
@@ -138,8 +139,28 @@ def _find_peak_target_layout(
 
     contracted = get_contracted_indices(peak_tensor, sibling_tensor)
     free = set(peak_tensor.input_indices) - contracted
-    free_sorted = sort_indices_by_size(free, size_dict)
-    contracted_sorted = sort_indices_by_size(contracted, size_dict)
+
+    desired_parent_layout = None
+    desired_sibling_layout = None
+    if desired_layout_by_node_id is not None:
+        desired_parent_layout = desired_layout_by_node_id.get(id(peak_parent))
+        desired_sibling_layout = desired_layout_by_node_id.get(
+            id(peak_parent.right if is_left_child else peak_parent.left)
+        )
+
+    if desired_parent_layout is not None or desired_sibling_layout is not None:
+        if desired_parent_layout is not None:
+            free_sorted = sort_indices_by_layout(free, desired_parent_layout)
+        else:
+            free_sorted = sort_indices_by_size(free, size_dict)
+
+        if desired_sibling_layout is not None:
+            contracted_sorted = sort_indices_by_layout(contracted, desired_sibling_layout)
+        else:
+            contracted_sorted = sort_indices_by_size(contracted, size_dict)
+    else:
+        free_sorted = sort_indices_by_size(free, size_dict)
+        contracted_sorted = sort_indices_by_size(contracted, size_dict)
 
     if is_left_child:
         return free_sorted + contracted_sorted
@@ -191,13 +212,9 @@ def _find_top_k_peak_nodes(
             break
 
     if not selected:
-        largest_initial_idx = max(
-            range(len(network.tensors)),
-            key=lambda i: max(network.tensors[i].shape) if network.tensors[i].shape else 1,
-        )
-        selected.append(leaf_to_node[largest_initial_idx])
+        raise ValueError("No peak nodes found, cannot apply greedy strategy.")
 
-    return selected
+    return sorted(selected, key=lambda node: node.is_leaf, reverse=True)
 
 
 class GreedyPermutationStrategy(IPermutationStrategy):
@@ -265,14 +282,14 @@ class GreedyPermutationStrategy(IPermutationStrategy):
             k,
         )
         frozen_node_ids = {id(node) for node in peak_nodes}
-        desired_layout_by_node_id: dict[int, list[int]] = {
-            id(node): _find_peak_target_layout(
+        desired_layout_by_node_id: dict[int, list[int]] = {}
+        for node in peak_nodes:
+            desired_layout_by_node_id[id(node)] = _find_peak_target_layout(
                 persistent_path,
                 node,
                 network.size_dict,
+                desired_layout_by_node_id,
             )
-            for node in peak_nodes
-        }
 
         def __set_node_layout(node: ContractionTreeNode, target_layout: list[int]) -> None:
             """Store permutation for a node tensor and remember desired layout for recursion."""
@@ -343,6 +360,7 @@ class GreedyPermutationStrategy(IPermutationStrategy):
                     left_free,
                     right_free,
                 )
+                print(sliced_indices)
 
             left_sliced = sliced_indices & left_free
             right_sliced = sliced_indices & right_free
