@@ -129,6 +129,24 @@ class TestGreedyPermutationStrategy:
         assert initial_perms == [(0, 1, 2)]
         assert intermediate_perms == []
 
+    def test_complex_network(self) -> None:
+        """Test the strategy on a more complex network with k = 2."""
+        network = TensorNetwork(
+            input_indices=[[0, 3, 4, 5, 6], [3, 5], [2, 7], [1, 2, 4, 6, 7]],
+            size_dict={0: 10, 1: 6, 2: 11, 3: 2, 4: 12, 5: 5, 6: 8, 7: 6},
+            shapes=[(10, 2, 11, 12, 5), (2, 12), (11, 6), (6, 11, 11, 5, 6)],
+            output_indices=[0, 1],
+            tensor_arrays=None,
+        )
+        contraction_path: ContractionPath = [(0, 1), (0, 1), (0, 1)]
+
+        initial_perms, intermediate_perms = GreedyPermutationStrategy.find_optimal_permutation(
+            network, contraction_path, k=2
+        )
+
+        assert initial_perms == [(0, 2, 4, 1, 3), (0, 1), (0, 1), (0, 1, 2, 3, 4)]
+        assert intermediate_perms == [(0, 1, 2), (0, 1, 2, 3, 4), (0, 1)]
+
 
 class TestGreedyPermutationStrategyMemory:
     """Tests for greedy memory estimations."""
