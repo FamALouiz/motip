@@ -177,7 +177,7 @@ def _find_top_k_peak_nodes(
         if candidate is not None:
             candidates.append((candidate, memory))
 
-    candidates.sort(key=lambda item: item[1], reverse=True)
+    candidates = sorted(candidates, key=lambda item: item[1], reverse=True)
 
     selected: list[ContractionTreeNode] = []
     seen_ids: set[int] = set()
