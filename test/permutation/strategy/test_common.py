@@ -11,6 +11,7 @@ from permutation.strategy.common import (
     get_input_layout_for_parent_use,
     get_result_layout_from_current_step,
     get_step_tensors,
+    sort_indices_by_layout,
     sort_indices_by_size,
 )
 from tensor_network.tn import TensorNetwork
@@ -37,6 +38,29 @@ class TestSortIndicesBySize:
         size_dict = {0: 10, 1: 2, 2: 5}
         with pytest.raises(ValueError):
             sort_indices_by_size(indices, size_dict)
+
+
+class TestSortIndicesByLayout:
+    """Test sorting indices by desired layout."""
+
+    @pytest.mark.parametrize(
+        ("desired_layout", "indices"),
+        [
+            ([0, 1, 2, 3], {0, 1, 2}),
+            ([0, 1, 2], [0, 1, 2]),
+        ],
+    )
+    def test_sort_indices(self, desired_layout: list[int], indices: Collection[int]) -> None:
+        """Test that indices are sorted according to their order in the desired layout."""
+        result = sort_indices_by_layout(indices, desired_layout)
+        assert result == [0, 1, 2]
+
+    def test_sort_indices_with_mismatching_layout_should_raise(self) -> None:
+        """Test that a ValueError is raised if desired_layout does not contain all indices."""
+        indices = {0, 1, 2}
+        desired_layout = [0, 1]
+        with pytest.raises(ValueError):
+            sort_indices_by_layout(indices, desired_layout)
 
 
 class TestGetStepTensors:
