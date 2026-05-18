@@ -113,6 +113,9 @@ def _find_peak_target_layout(
         peak_node,
     )
 
+    if peak_node.is_leaf:
+        return peak_tensor.input_indices
+
     if peak_parent is None:
         return sort_indices_by_size(
             set(peak_tensor.input_indices),
