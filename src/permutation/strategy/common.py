@@ -31,6 +31,27 @@ def sort_indices_by_size(indices: Collection[int], size_dict: dict[int, int]) ->
     return sorted(indices, key=lambda idx: size_dict[idx])
 
 
+def sort_indices_by_layout(indices: Collection[int], desired_layout: list[int]) -> list[int]:
+    """Sort tensor indices by their order in a desired layout.
+
+    Args:
+        indices: The indices to sort.
+        desired_layout: The desired index layout.
+
+    Returns:
+        The indices sorted according to their order in the desired layout.
+
+    Raises:
+        ValueError: If desired_layout does not contain all indices.
+    """
+    for idx in indices:
+        if idx not in desired_layout:
+            raise ValueError(f"Desired layout is missing index {idx}")
+
+    desired_layout_by_index = {idx: i for i, idx in enumerate(desired_layout)}
+    return sorted(indices, key=lambda idx: desired_layout_by_index[idx])
+
+
 def get_step_tensors(
     persistent_path: PersistentContractionPath, step: int
 ) -> tuple[Tensor, Tensor, Tensor]:
