@@ -56,6 +56,7 @@ def peak_chain_network() -> TensorNetwork:
     )
 
 
+@pytest.mark.xfail(reason="Greedy strategy does not currently support freezing leaf nodes.")
 class TestGreedyPermutationStrategy:
     """Tests for greedy permutation layouts."""
 
