@@ -83,7 +83,7 @@ class TestPersistentContractionPath:
         )
         with_history = PersistentContractionPath.from_contraction_path(network, [(0, 1)])
 
-        with pytest.raises(IndexError, match="Step out of range."):
+        with pytest.raises(IndexError):
             with_history.get_state(step)
 
     def test_get_state_returns_deep_copy(self) -> None:

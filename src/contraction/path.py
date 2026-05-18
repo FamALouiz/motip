@@ -52,7 +52,9 @@ class PersistentContractionPath:
         Raises:
             IndexError: If the step index is out of range.
         """
-        if step < 0 or step >= len(self.history):
+        if step < 0:
+            raise IndexError("Step be positive.")
+        if step >= len(self.history):
             raise IndexError("Step out of range.")
         return deepcopy(self.history[step])
 
