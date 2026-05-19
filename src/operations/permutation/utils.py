@@ -1,6 +1,7 @@
 """Permutation utilities."""
 
-from operations.permutation import Permutation
+from operations.base import TensorOperationResult
+from operations.permutation import Permutation, TensorPermutationOperation
 from tensor import Tensor
 
 
@@ -36,3 +37,28 @@ def to_permutation(current_indices: list[int], desired_layout: list[int]) -> Per
             f"Got desired layout {desired_layout} and current layout {current_indices}."
         )
     return tuple(current_indices.index(idx) for idx in desired_layout)
+
+
+def permute_tensor(tensor: Tensor, permutation: Permutation) -> Tensor:
+    """Permute the indices of a tensor.
+
+    This function will permute the indices of a tensor in a way that is consistent with the
+    ordering of the indices in the tensor network. The specific permutation applied will depend
+    on the ordering of the indices in the tensor network and the original ordering of the
+    indices in the tensor.
+
+    Args:
+        tensor: The tensor to permute.
+        permutation: The permutation to apply. This should be a list of integers representing the
+        new order of the indices.
+
+    Returns:
+        The permuted tensor.
+
+    Raises:
+        ValueError: If the permutation is not a valid rearrangement of the tensor's indices.
+    """
+    tensor_permutation_operation = TensorPermutationOperation(permutation)
+    return tensor_permutation_operation.apply(
+        TensorOperationResult(tensor=tensor)
+    ).tensor  # TODO: Use dummy tensor operation formation
