@@ -9,9 +9,9 @@ from memory.utils import (
     get_largest_k_intermediate_tensors_in_path,
     get_largest_k_tensors_in_network,
 )
+from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.contraction.tree import ContractionTreeNode
-from operations.contraction.utils import get_contracted_indices
 from operations.permutation import Permutation
 from operations.permutation.strategy import IPermutationStrategy
 from operations.permutation.strategy.common import (

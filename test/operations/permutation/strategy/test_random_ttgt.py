@@ -5,8 +5,8 @@ from typing import Sequence
 import pytest
 
 from memory import Memory
+from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath
-from operations.contraction.utils import get_contracted_indices
 from operations.permutation.strategy.random_ttgt import RandomTTGTPermutationStrategy
 from tensor_network import TensorNetwork
 

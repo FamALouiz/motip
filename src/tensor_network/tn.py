@@ -6,7 +6,7 @@ from typing import Iterator, Optional, override
 from networkx import Graph
 from numpy import ndarray
 
-from operations.contraction.utils import get_contracted_indices
+# from operations.contraction.utils import get_contracted_indices
 from tensor import Tensor
 
 
@@ -200,7 +200,7 @@ class TensorNetwork:
         for i, tensor_i in enumerate(self.tensors):
             for j, tensor_j in enumerate(self.tensors):
                 if i < j:
-                    shared = get_contracted_indices(tensor_i, tensor_j)
+                    shared = set(tensor_i.input_indices) & set(tensor_j.input_indices)
                     if len(shared) > 0:
                         graph.add_edge(i, j, index=list(shared))
 

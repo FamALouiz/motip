@@ -4,9 +4,9 @@ from __future__ import annotations
 
 from typing import Collection, overload
 
+from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.contraction.tree import ContractionTree, ContractionTreeNode
-from operations.contraction.utils import get_contracted_indices
 from operations.permutation import Permutation
 from operations.permutation.utils import to_permutation
 from tensor import Tensor

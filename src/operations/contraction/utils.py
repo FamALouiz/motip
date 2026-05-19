@@ -1,29 +1,9 @@
 """Util functions for contraction operations."""
 
-from copy import deepcopy
-
 from operations.contraction import TensorContractionOperation
-from operations.contraction.path import ContractionPath
 from operations.utils import tensor_operation_result_from_tensor
 from tensor import Tensor
 from tensor_network.tn import TensorNetwork
-
-
-def get_contracted_indices(tensor_a: Tensor, tensor_b: Tensor) -> set[int]:
-    """Get the set of contracted indices between two tensors."""
-    contracted_indices = set(tensor_a.input_indices) & set(tensor_b.input_indices)
-
-    return contracted_indices
-
-
-def get_indices_after_contraction(tensor_a: Tensor, tensor_b: Tensor) -> set[int]:
-    """Get the set of indices that will be present in the new tensor after contraction."""
-    contracted_indices = get_contracted_indices(tensor_a, tensor_b)
-    new_tensor_indices = (
-        set(tensor_a.input_indices) | set(tensor_b.input_indices)
-    ) - contracted_indices
-
-    return new_tensor_indices
 
 
 def contract_tensors(tensor_a: Tensor, tensor_b: Tensor, sliced_indices: list[int]) -> Tensor:
@@ -69,20 +49,3 @@ def contract_tensors_in_network(network: TensorNetwork, pair: tuple[int, int]) -
     new_tensor_network.tensors.insert(pair[0], new_tensor)
 
     return new_tensor_network
-
-
-def contract_network(network: TensorNetwork, contraction_path: ContractionPath) -> TensorNetwork:
-    """Contract a tensor network according to a given contraction path.
-
-    Args:
-        network: The tensor network to contract.
-        contraction_path: A list of tuples, where each tuple contains the indices of the tensors to
-            contract at each step.
-
-    Returns:
-        The resulting tensor network after performing all contractions in the path.
-    """
-    current_network = deepcopy(network)
-    for pair in contraction_path:
-        current_network = contract_tensors_in_network(current_network, pair)
-    return current_network

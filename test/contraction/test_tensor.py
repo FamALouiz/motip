@@ -3,11 +3,8 @@
 import numpy as np
 import pytest
 
-from operations.contraction.utils import (
-    contract_tensors,
-    get_contracted_indices,
-    get_indices_after_contraction,
-)
+from operations.contraction import get_contracted_indices, get_indices_after_contraction
+from operations.contraction.utils import contract_tensors
 from tensor import Tensor
 
 

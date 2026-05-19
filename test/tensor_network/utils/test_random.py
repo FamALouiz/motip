@@ -1,10 +1,30 @@
 """Tests for the random tensor network generation utility."""
 
+from copy import deepcopy
+
 import cotengra as ctg
 
-from operations.contraction.utils import contract_network
+from operations.contraction.path import ContractionPath
+from operations.contraction.utils import contract_tensors_in_network
 from tensor_network import TensorNetwork
 from tensor_network.utils.random import generate_random_tn
+
+
+def _contract_network(network: TensorNetwork, contraction_path: ContractionPath) -> TensorNetwork:
+    """Contract a tensor network according to a given contraction path.
+
+    Args:
+        network: The tensor network to contract.
+        contraction_path: A list of tuples, where each tuple contains the indices of the tensors to
+            contract at each step.
+
+    Returns:
+        The resulting tensor network after performing all contractions in the path.
+    """
+    current_network = deepcopy(network)
+    for pair in contraction_path:
+        current_network = contract_tensors_in_network(current_network, pair)
+    return current_network
 
 
 class TestRandomTNGeneration:
@@ -31,7 +51,7 @@ class TestRandomTNGeneration:
             shapes=tn.shapes,
         ).get_path()
 
-        final_network = contract_network(tn, contraction_path)
+        final_network = _contract_network(tn, contraction_path)
 
         assert isinstance(tn, TensorNetwork)
         assert len(tn.input_indices) == num_tensors

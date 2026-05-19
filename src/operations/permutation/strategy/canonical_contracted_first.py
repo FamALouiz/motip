@@ -4,8 +4,8 @@ from typing import override
 
 from memory import Memory
 from memory.calculator import MemoryCalculator
+from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath, PersistentContractionPath
-from operations.contraction.utils import get_contracted_indices
 from operations.permutation import Permutation
 from operations.permutation.strategy import IPermutationStrategy
 from operations.permutation.strategy.common import (

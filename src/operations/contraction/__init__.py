@@ -5,9 +5,25 @@ from typing import Any
 import numpy as np
 
 from operations.base import TensorOperation, TensorOperationResult
-from operations.contraction.utils import get_contracted_indices, get_indices_after_contraction
 from operations.utils import tensor_operation_result_from_tensor
 from tensor import Tensor
+
+
+def get_contracted_indices(tensor_a: Tensor, tensor_b: Tensor) -> set[int]:
+    """Get the set of contracted indices between two tensors."""
+    contracted_indices = set(tensor_a.input_indices) & set(tensor_b.input_indices)
+
+    return contracted_indices
+
+
+def get_indices_after_contraction(tensor_a: Tensor, tensor_b: Tensor) -> set[int]:
+    """Get the set of indices that will be present in the new tensor after contraction."""
+    contracted_indices = get_contracted_indices(tensor_a, tensor_b)
+    new_tensor_indices = (
+        set(tensor_a.input_indices) | set(tensor_b.input_indices)
+    ) - contracted_indices
+
+    return new_tensor_indices
 
 
 def _contract_tensor_arrays(tensor_a: Tensor, tensor_b: Tensor) -> np.ndarray:
