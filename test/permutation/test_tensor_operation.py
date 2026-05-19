@@ -1,9 +1,9 @@
-"""Tests for the tensor permutation utilities."""
+"""Tests for the tensor permutation operation."""
 
 import numpy as np
 import pytest
 
-from permutation.tensor import permute_tensor
+from operations.permutation import TensorPermutationOperation
 from tensor import Tensor
 
 
@@ -18,7 +18,7 @@ class TestPermuteTensor:
             array=np.arange(24).reshape(2, 3, 4),
         )
 
-        permuted = permute_tensor(tensor, [2, 0, 1])
+        permuted = TensorPermutationOperation([2, 0, 1]).apply(tensor).tensor
 
         assert permuted.input_indices == [12, 10, 11]
         assert permuted.shape == (4, 2, 3)
@@ -46,7 +46,7 @@ class TestPermuteTensor:
             ValueError,
             match="Permutation must be a valid rearrangement of the tensor's indices",
         ):
-            permute_tensor(tensor, permutation)
+            TensorPermutationOperation(permutation).apply(tensor)
 
     def test_identity_permutation_returns_same_metadata(self) -> None:
         """Test identity permutation preserves input indices and shape."""
@@ -56,7 +56,7 @@ class TestPermuteTensor:
             array=None,
         )
 
-        permuted = permute_tensor(tensor, [0, 1, 2])
+        permuted = TensorPermutationOperation([0, 1, 2]).apply(tensor).tensor
 
         assert permuted.input_indices == tensor.input_indices
         assert permuted.shape == tensor.shape

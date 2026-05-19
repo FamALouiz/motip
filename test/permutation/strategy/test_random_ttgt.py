@@ -7,7 +7,7 @@ import pytest
 from contraction.path import ContractionPath
 from contraction.tensor import get_contracted_indices
 from memory import Memory
-from permutation.strategy.random_ttgt import RandomTTGTPermutationStrategy
+from operations.permutation.strategy.random_ttgt import RandomTTGTPermutationStrategy
 from tensor_network import TensorNetwork
 
 

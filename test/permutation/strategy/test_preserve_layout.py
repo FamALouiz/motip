@@ -4,7 +4,7 @@ import pytest
 
 from contraction.path import ContractionPath
 from memory import Memory
-from permutation.strategy.preserve_layout import PreserveLayoutPermutationStrategy
+from operations.permutation.strategy.preserve_layout import PreserveLayoutPermutationStrategy
 from tensor_network import TensorNetwork
 
 

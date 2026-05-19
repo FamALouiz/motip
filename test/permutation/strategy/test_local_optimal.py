@@ -2,7 +2,7 @@
 
 from contraction.path import ContractionPath
 from memory import Memory
-from permutation.strategy.local_optimal import LocalOptimalPermutationStrategy
+from operations.permutation.strategy.local_optimal import LocalOptimalPermutationStrategy
 from tensor_network import TensorNetwork
 
 

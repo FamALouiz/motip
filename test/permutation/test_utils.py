@@ -2,8 +2,8 @@
 
 import pytest
 
-from permutation.strategy.common import apply_layout_to_tensor
-from permutation.utils import is_identity, to_identity_permutation
+from operations.permutation.strategy.common import apply_layout_to_tensor
+from operations.permutation.utils import is_identity, to_identity_permutation
 from tensor import Tensor
 
 
