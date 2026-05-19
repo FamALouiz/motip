@@ -2,6 +2,7 @@
 
 from operations.base import TensorOperationResult
 from operations.permutation import Permutation, TensorPermutationOperation
+from operations.utils import tensor_operation_result_from_tensor
 from tensor import Tensor
 
 
@@ -59,6 +60,4 @@ def permute_tensor(tensor: Tensor, permutation: Permutation) -> Tensor:
         ValueError: If the permutation is not a valid rearrangement of the tensor's indices.
     """
     tensor_permutation_operation = TensorPermutationOperation(permutation)
-    return tensor_permutation_operation.apply(
-        TensorOperationResult(tensor=tensor)
-    ).tensor  # TODO: Use dummy tensor operation formation
+    return tensor_permutation_operation.apply(tensor_operation_result_from_tensor(tensor)).tensor

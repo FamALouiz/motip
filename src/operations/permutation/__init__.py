@@ -5,6 +5,7 @@ from typing import Any, Sequence, TypeAlias
 import numpy as np
 
 from operations.base import TensorOperation, TensorOperationResult
+from operations.utils import tensor_operation_result_from_tensor
 from tensor import Tensor
 
 Permutation: TypeAlias = Sequence[int]
@@ -36,4 +37,4 @@ class TensorPermutationOperation(TensorOperation):
     ) -> TensorOperationResult:
         """Apply the tensor permutation operation."""
         output = _permute_tensor(input.tensor, self.__permutation)
-        return TensorOperationResult(tensor=output)
+        return tensor_operation_result_from_tensor(output)
