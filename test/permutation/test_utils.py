@@ -3,7 +3,7 @@
 import pytest
 
 from operations.permutation.strategy.common import apply_layout_to_tensor
-from operations.permutation.utils import is_identity, to_identity_permutation
+from operations.permutation.utils import is_identity, permute_tensor, to_identity_permutation
 from tensor import Tensor
 
 
@@ -47,3 +47,19 @@ class TestApplyLayoutToTensor:
         tensor = Tensor(input_indices=[0, 1, 2], shape=(2, 3, 4), array=None)
         with pytest.raises(ValueError):
             apply_layout_to_tensor(tensor, [0, 1])
+
+
+class TestPermuteTensor:
+    """Test permuting a tensor's input indices."""
+
+    def test_permute_tensor(self) -> None:
+        """Test that the correct permutation is applied to the tensor."""
+        tensor = Tensor(input_indices=[0, 1, 2], shape=(2, 3, 4), array=None)
+        result = permute_tensor(tensor, [2, 0, 1])
+        assert result == Tensor(input_indices=[2, 0, 1], shape=(4, 2, 3), array=None)
+
+    def test_permute_tensor_with_invalid_permutation_should_raise(self) -> None:
+        """Test that a ValueError is raised."""
+        tensor = Tensor(input_indices=[0, 1, 2], shape=(2, 3, 4), array=None)
+        with pytest.raises(ValueError):
+            permute_tensor(tensor, [0, 1])
