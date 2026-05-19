@@ -33,8 +33,9 @@ class TensorPermutationOperation(TensorOperation):
         self.__permutation = permutation
 
     def apply(
-        self, input: TensorOperationResult, *args: tuple[Any], **kwargs: dict[str, Any]
+        self, *inputs: TensorOperationResult, **kwargs: dict[str, Any]
     ) -> TensorOperationResult:
         """Apply the tensor permutation operation."""
-        output = _permute_tensor(input.tensor, self.__permutation)
+        assert len(inputs) == 1, "TensorPermutationOperation expects exactly one input tensor."
+        output = _permute_tensor(inputs[0].tensor, self.__permutation)
         return tensor_operation_result_from_tensor(output)

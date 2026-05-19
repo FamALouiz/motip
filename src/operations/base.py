@@ -19,6 +19,6 @@ class TensorOperation(ABC):
 
     @abstractmethod
     def apply(
-        self, input: TensorOperationResult, *args: tuple[Any], **kwargs: dict[str, Any]
+        self, *inputs: TensorOperationResult, **kwargs: dict[str, Any]
     ) -> TensorOperationResult:
         """Apply the tensor operation."""
