@@ -6,7 +6,7 @@ from typing import Iterator, Optional, override
 from networkx import Graph
 from numpy import ndarray
 
-from contraction.tensor import get_contracted_indices
+from operations.contraction.utils import get_contracted_indices
 from tensor import Tensor
 
 

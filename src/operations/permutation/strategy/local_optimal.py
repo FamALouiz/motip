@@ -3,10 +3,10 @@
 from typing import override
 
 from contraction.path import ContractionPath, PersistentContractionPath
-from contraction.tensor import get_contracted_indices
 from contraction.tree import ContractionTree, ContractionTreeNode
 from memory import Memory
 from memory.calculator import MemoryCalculator
+from operations.contraction.utils import get_contracted_indices
 from operations.permutation import Permutation
 from operations.permutation.strategy import IPermutationStrategy
 from operations.permutation.strategy.common import get_step_tensors, sort_indices_by_size

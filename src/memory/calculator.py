@@ -3,8 +3,8 @@
 import math
 from typing import overload
 
-from contraction.tensor import get_contracted_indices
 from memory import Memory
+from operations.contraction.utils import get_contracted_indices
 from tensor import Tensor
 from tensor_network.tn import _TensorPool
 

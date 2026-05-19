@@ -3,9 +3,9 @@
 from typing import override
 
 from contraction.path import ContractionPath, PersistentContractionPath
-from contraction.tensor import get_contracted_indices
 from memory import Memory
 from memory.calculator import MemoryCalculator
+from operations.contraction.utils import get_contracted_indices
 from operations.permutation import Permutation
 from operations.permutation.strategy import IPermutationStrategy
 from operations.permutation.strategy.common import (
