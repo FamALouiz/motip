@@ -2,7 +2,7 @@
 
 import cotengra as ctg
 
-from contraction.tensor_network import contract_network
+from operations.contraction.utils import contract_network
 from tensor_network import TensorNetwork
 from tensor_network.utils.random import generate_random_tn
 

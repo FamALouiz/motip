@@ -2,7 +2,7 @@
 
 import pytest
 
-from contraction.tensor_network import contract_network, contract_tensors_in_network
+from operations.contraction.utils import contract_network, contract_tensors_in_network
 from tensor_network import TensorNetwork
 
 

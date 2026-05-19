@@ -3,7 +3,6 @@
 import pytest
 
 from contraction.path import ContractionPath, PersistentContractionPath
-from contraction.tensor_network import contract_tensors_in_network
 from memory.calculator import MemoryCalculator
 from memory.utils import (
     get_largest_intermediate_tensor_in_path,
@@ -11,6 +10,7 @@ from memory.utils import (
     get_largest_k_tensors_in_network,
     get_largest_tensor_in_network,
 )
+from operations.contraction.utils import contract_tensors_in_network
 from tensor_network import TensorNetwork
 
 
