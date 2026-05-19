@@ -5,9 +5,9 @@ from typing import override
 from contraction.path import ContractionPath, PersistentContractionPath
 from memory import Memory
 from memory.calculator import MemoryCalculator
-from permutation import Permutation
-from permutation.strategy import IPermutationStrategy
-from permutation.utils import to_identity_permutation
+from operations.permutation import Permutation
+from operations.permutation.strategy import IPermutationStrategy
+from operations.permutation.utils import to_identity_permutation
 from tensor_network.tn import TensorNetwork
 
 

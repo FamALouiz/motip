@@ -7,10 +7,10 @@ from contraction.tensor import get_contracted_indices
 from contraction.tree import ContractionTree, ContractionTreeNode
 from memory import Memory
 from memory.calculator import MemoryCalculator
-from permutation import Permutation
-from permutation.strategy import IPermutationStrategy
-from permutation.strategy.common import get_step_tensors, sort_indices_by_size
-from permutation.utils import to_permutation
+from operations.permutation import Permutation
+from operations.permutation.strategy import IPermutationStrategy
+from operations.permutation.strategy.common import get_step_tensors, sort_indices_by_size
+from operations.permutation.utils import to_permutation
 from tensor_network.tn import TensorNetwork
 
 

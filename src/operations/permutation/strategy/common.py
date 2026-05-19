@@ -7,8 +7,8 @@ from typing import Collection, overload
 from contraction.path import ContractionPath, PersistentContractionPath
 from contraction.tensor import get_contracted_indices
 from contraction.tree import ContractionTree, ContractionTreeNode
-from permutation import Permutation
-from permutation.utils import to_permutation
+from operations.permutation import Permutation
+from operations.permutation.utils import to_permutation
 from tensor import Tensor
 
 

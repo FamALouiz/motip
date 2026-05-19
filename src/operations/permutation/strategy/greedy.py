@@ -12,15 +12,15 @@ from memory.utils import (
     get_largest_k_intermediate_tensors_in_path,
     get_largest_k_tensors_in_network,
 )
-from permutation import Permutation
-from permutation.strategy import IPermutationStrategy
-from permutation.strategy.common import (
+from operations.permutation import Permutation
+from operations.permutation.strategy import IPermutationStrategy
+from operations.permutation.strategy.common import (
     build_tree_maps,
     get_step_tensors,
     sort_indices_by_layout,
     sort_indices_by_size,
 )
-from permutation.utils import to_permutation
+from operations.permutation.utils import to_permutation
 from tensor import Tensor
 from tensor_network.tn import TensorNetwork
 

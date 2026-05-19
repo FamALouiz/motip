@@ -6,15 +6,15 @@ from contraction.path import ContractionPath, PersistentContractionPath
 from contraction.tensor import get_contracted_indices
 from memory import Memory
 from memory.calculator import MemoryCalculator
-from permutation import Permutation
-from permutation.strategy import IPermutationStrategy
-from permutation.strategy.common import (
+from operations.permutation import Permutation
+from operations.permutation.strategy import IPermutationStrategy
+from operations.permutation.strategy.common import (
     apply_layout_to_tensor,
     build_tree_maps,
     get_result_layout_from_current_step,
     sort_indices_by_size,
 )
-from permutation.utils import to_identity_permutation
+from operations.permutation.utils import to_identity_permutation
 from tensor import Tensor
 from tensor_network.tn import TensorNetwork
 
