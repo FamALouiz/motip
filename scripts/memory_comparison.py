@@ -37,8 +37,12 @@ from operations.permutation.strategy.canonical_free_first import (  # noqa: E402
     CanonicalFreeFirstPermutationStrategy,
 )
 from operations.permutation.strategy.greedy import GreedyPermutationStrategy  # noqa: E402
-from operations.permutation.strategy.local_optimal import LocalOptimalPermutationStrategy  # noqa: E402
-from operations.permutation.strategy.next_use_aware import NextUseAwarePermutationStrategy  # noqa: E402
+from operations.permutation.strategy.local_optimal import (  # noqa: E402
+    LocalOptimalPermutationStrategy,
+)
+from operations.permutation.strategy.next_use_aware import (  # noqa: E402
+    NextUseAwarePermutationStrategy,
+)
 from operations.permutation.strategy.preserve_layout import (  # noqa: E402
     PreserveLayoutPermutationStrategy,
 )

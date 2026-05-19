@@ -1,6 +1,5 @@
 """Permutation utilities."""
 
-from operations.base import TensorOperationResult
 from operations.permutation import Permutation, TensorPermutationOperation
 from operations.utils import tensor_operation_result_from_tensor
 from tensor import Tensor
