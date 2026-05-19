@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import overload
 
-from contraction.path import ContractionPath, PersistentContractionPath
+from operations.contraction.path import ContractionPath, PersistentContractionPath
 
 
 @dataclass(slots=True)

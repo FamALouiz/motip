@@ -4,8 +4,8 @@ from typing import Any, cast
 
 import pytest
 
-from contraction.path import PersistentContractionPath
-from contraction.tree import ContractionTree
+from operations.contraction.path import PersistentContractionPath
+from operations.contraction.tree import ContractionTree
 from tensor_network import TensorNetwork
 
 

@@ -2,9 +2,9 @@
 
 from typing import override
 
-from contraction.path import ContractionPath, PersistentContractionPath
 from memory import Memory
 from memory.calculator import MemoryCalculator
+from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.permutation import Permutation
 from operations.permutation.strategy import IPermutationStrategy
 from operations.permutation.strategy.common import (

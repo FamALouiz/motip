@@ -2,8 +2,8 @@
 
 import pytest
 
-from contraction.path import ContractionPath
 from memory import Memory
+from operations.contraction.path import ContractionPath
 from operations.permutation.strategy.canonical_free_first import (
     CanonicalFreeFirstPermutationStrategy,
 )

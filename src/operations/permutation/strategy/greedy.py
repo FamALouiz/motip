@@ -2,8 +2,6 @@
 
 from typing import override
 
-from contraction.path import ContractionPath, PersistentContractionPath
-from contraction.tree import ContractionTreeNode
 from memory import Memory
 from memory.calculator import MemoryCalculator
 from memory.utils import (
@@ -11,6 +9,8 @@ from memory.utils import (
     get_largest_k_intermediate_tensors_in_path,
     get_largest_k_tensors_in_network,
 )
+from operations.contraction.path import ContractionPath, PersistentContractionPath
+from operations.contraction.tree import ContractionTreeNode
 from operations.contraction.utils import get_contracted_indices
 from operations.permutation import Permutation
 from operations.permutation.strategy import IPermutationStrategy

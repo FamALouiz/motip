@@ -2,8 +2,8 @@
 
 from copy import deepcopy
 
-from contraction.path import ContractionPath
 from operations.contraction import TensorContractionOperation
+from operations.contraction.path import ContractionPath
 from operations.utils import tensor_operation_result_from_tensor
 from tensor import Tensor
 from tensor_network.tn import TensorNetwork

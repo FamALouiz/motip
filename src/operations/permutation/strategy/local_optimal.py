@@ -2,10 +2,10 @@
 
 from typing import override
 
-from contraction.path import ContractionPath, PersistentContractionPath
-from contraction.tree import ContractionTree, ContractionTreeNode
 from memory import Memory
 from memory.calculator import MemoryCalculator
+from operations.contraction.path import ContractionPath, PersistentContractionPath
+from operations.contraction.tree import ContractionTree, ContractionTreeNode
 from operations.contraction.utils import get_contracted_indices
 from operations.permutation import Permutation
 from operations.permutation.strategy import IPermutationStrategy

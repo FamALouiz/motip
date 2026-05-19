@@ -1,7 +1,7 @@
 """Tests for the NextUseAwarePermutationStrategy memory estimates."""
 
-from contraction.path import ContractionPath
 from memory import Memory
+from operations.contraction.path import ContractionPath
 from operations.permutation.strategy.next_use_aware import NextUseAwarePermutationStrategy
 from tensor_network import TensorNetwork
 

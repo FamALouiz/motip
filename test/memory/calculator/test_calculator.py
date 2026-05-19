@@ -5,9 +5,9 @@ from collections.abc import Iterator
 import pytest
 from _pytest.fixtures import FixtureRequest
 
-from contraction.path import ContractionPath
 from memory import Memory
 from memory.calculator import MemoryCalculator
+from operations.contraction.path import ContractionPath
 from tensor import Tensor
 from tensor_network import TensorNetwork
 from tensor_network.tn import _TensorPool

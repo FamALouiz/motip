@@ -4,7 +4,7 @@ from copy import deepcopy
 
 import pytest
 
-from contraction.path import PersistentContractionPath
+from operations.contraction.path import PersistentContractionPath
 from operations.contraction.utils import contract_tensors_in_network
 from tensor_network import TensorNetwork
 

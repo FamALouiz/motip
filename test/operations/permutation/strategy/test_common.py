@@ -4,8 +4,8 @@ from typing import Collection
 
 import pytest
 
-from contraction.path import PersistentContractionPath
-from contraction.tree import ContractionTree
+from operations.contraction.path import PersistentContractionPath
+from operations.contraction.tree import ContractionTree
 from operations.permutation.strategy.common import (
     build_tree_maps,
     get_input_layout_for_parent_use,

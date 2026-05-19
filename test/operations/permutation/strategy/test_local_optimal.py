@@ -1,7 +1,7 @@
 """Tests for the local optimal permutation strategy."""
 
-from contraction.path import ContractionPath
 from memory import Memory
+from operations.contraction.path import ContractionPath
 from operations.permutation.strategy.local_optimal import LocalOptimalPermutationStrategy
 from tensor_network import TensorNetwork
 

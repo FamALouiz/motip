@@ -6,9 +6,9 @@ from typing import Collection, overload
 
 from more_itertools import one
 
-from contraction.path import ContractionPath, PersistentContractionPath
 from memory import Memory
 from memory.calculator import MemoryCalculator
+from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.contraction.utils import contract_tensors_in_network
 from tensor_network import TensorNetwork
 
