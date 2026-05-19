@@ -4,7 +4,7 @@ from collections.abc import Sequence
 from copy import deepcopy
 from dataclasses import dataclass
 
-from contraction.tensor_network import contract_tensors_in_network
+from operations.contraction.utils import contract_tensors_in_network
 from tensor_network import TensorNetwork
 
 type ContractionPath = Sequence[tuple[int, int]]
