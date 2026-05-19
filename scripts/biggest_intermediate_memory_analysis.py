@@ -23,7 +23,7 @@ if str(SRC) not in sys.path:
 from sweep_script import AbstractSweepScript  # noqa: E402
 
 from contraction.path import ContractionPath, PersistentContractionPath  # noqa: E402
-from memory.calculator.calculator import MemoryCalculator  # noqa: E402
+from memory.calculator import MemoryCalculator  # noqa: E402
 from tensor_network.tn import TensorNetwork  # noqa: E402
 from tensor_network.utils.random import generate_random_tn  # noqa: E402
 

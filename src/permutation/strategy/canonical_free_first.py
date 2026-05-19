@@ -5,7 +5,7 @@ from typing import override
 from contraction.path import ContractionPath, PersistentContractionPath
 from contraction.tensor import get_contracted_indices
 from memory import Memory
-from memory.calculator.calculator import MemoryCalculator
+from memory.calculator import MemoryCalculator
 from permutation import Permutation
 from permutation.strategy import IPermutationStrategy
 from permutation.strategy.common import (
