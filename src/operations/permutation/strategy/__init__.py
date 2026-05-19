@@ -2,10 +2,9 @@
 
 from typing import Protocol, runtime_checkable
 
-from permutation import Permutation
-
 from contraction.path import ContractionPath
 from memory import Memory
+from operations.permutation import Permutation
 from tensor_network.tn import TensorNetwork
 
 
