@@ -16,7 +16,7 @@ class TestPermuteTensor:
         tensor = Tensor(
             input_indices=[10, 11, 12],
             shape=(2, 3, 4),
-            array=np.arange(24).reshape(2, 3, 4),
+            array=np.arange(24).reshape(2, 3, 4).astype(np.float64),
         )
 
         permuted = (
