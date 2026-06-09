@@ -1,3 +1,6 @@
 [submodule "libs/hptt"]
 	path = libs/hptt
 	url = https://github.com/springer13/hptt.git
+[submodule "libs/tccg"]
+	path = libs/tccg
+	url = https://github.com/HPAC/tccg.git
