@@ -12,6 +12,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v3
+        with:
+          submodules: "true"
 
       - name: Set up python
         uses: actions/setup-python@v4
@@ -20,6 +22,12 @@ jobs:
 
       - name: Install UV
         run: pip install uv
+
+      - name: Install hptt
+        run: cd libs/hptt && make scalar && cd pythonAPI && uv run python setup.py install && export HPTT_ROOT=/home/runner/work/motip/motip/libs/hptt/pythonAPI/../
+
+      - name: Install tccg
+        run: cd libs/tccg && uv run python setup.py install && export TCCG_ROOT=/home/runner/work/motip/motip/libs/tccg
 
       - name: Run tests
         run: uv run pytest
