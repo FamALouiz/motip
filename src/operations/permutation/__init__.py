@@ -2,7 +2,7 @@
 
 from typing import Any, Sequence, TypeAlias
 
-import numpy as np
+import hptt
 
 from operations.base import TensorOperation, TensorOperationResult
 from operations.utils import tensor_operation_result_from_tensor
@@ -21,7 +21,7 @@ def _permute_tensor(tensor: Tensor, permutation: Permutation) -> Tensor:
     return Tensor(
         input_indices=[tensor.input_indices[i] for i in permutation],
         shape=tuple(tensor.shape[i] for i in permutation),
-        array=np.transpose(tensor.array, axes=permutation) if tensor.array is not None else None,
+        array=hptt.transpose(tensor.array, axes=permutation) if tensor.array is not None else None,
     )
 
 
