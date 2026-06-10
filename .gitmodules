@@ -7,3 +7,6 @@
 [submodule "libs/tcl"]
 	path = libs/tcl
 	url = https://github.com/springer13/tcl.git
+[submodule "libs/blis"]
+	path = libs/blis
+	url = https://github.com/flame/blis.git
