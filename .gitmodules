@@ -4,3 +4,6 @@
 [submodule "libs/tccg"]
 	path = libs/tccg
 	url = https://github.com/FamALouiz/tccg-3.x.git
+[submodule "libs/tcl"]
+	path = libs/tcl
+	url = https://github.com/springer13/tcl.git
