@@ -3,6 +3,7 @@
 import numpy as np
 
 from operations.contraction.tccg_interface.discoverer import TCCGDiscoverer
+from operations.contraction.tccg_interface.generator import TCCGGenerator
 from operations.contraction.tccg_interface.pybind_compiler import TCCGPyBind11Compiler
 from operations.contraction.tccg_interface.runtime import TCCGRuntime
 
@@ -26,8 +27,7 @@ def execute_tccg_contraction(
     Returns:
         Output tensor array in Fortran order.
     """
-    tensor_a_f = np.asfortranarray(tensor_a)
-    tensor_b_f = np.asfortranarray(tensor_b)
+    TCCGGenerator().generate_tccg_file(tensor_a, tensor_b, ordered_new_indices, tccg_impl_dir)
 
     discoverer = TCCGDiscoverer(tccg_impl_dir, tensor_a.dtype, tensor_b.dtype)
     fn_name, param_count, cpp_path = discoverer.discover()
@@ -37,6 +37,9 @@ def execute_tccg_contraction(
     so_path = compiler.compile()
 
     runtime = TCCGRuntime(so_path, fn_name, param_count == 7, tensor_a.dtype)
+
+    tensor_a_f = np.asfortranarray(tensor_a)
+    tensor_b_f = np.asfortranarray(tensor_b)
     output = runtime.execute_contraction(
         tensor_a_f, tensor_b_f, ordered_new_indices, new_tensor_shape
     )
