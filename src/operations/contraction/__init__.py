@@ -42,7 +42,7 @@ def _contract_tensor_arrays(tensor_a: Tensor, tensor_b: Tensor) -> np.ndarray:
     return contracted_array
 
 
-def _contract_tensors(tensor_a: Tensor, tensor_b: Tensor) -> Tensor:
+def _contract_tensors(tensor_a: Tensor, tensor_b: Tensor, use_tccg: bool = False) -> Tensor:
     new_tensor_indices = get_indices_after_contraction(tensor_a, tensor_b)
 
     ordered_new_indices = []
@@ -63,25 +63,13 @@ def _contract_tensors(tensor_a: Tensor, tensor_b: Tensor) -> Tensor:
 
     new_array = None
     if tensor_a.array is not None and tensor_b.array is not None:
-        new_array = _contract_tensor_arrays(tensor_a, tensor_b)
+        if use_tccg:
+            _generate_tccg_file(tensor_a, tensor_b, ordered_new_indices)
+            raise NotImplementedError("TCCG integration is not yet implemented.")  # TODO
+        else:
+            new_array = _contract_tensor_arrays(tensor_a, tensor_b)
 
     return Tensor(ordered_new_indices, tuple(new_tensor_shape), new_array)
-
-
-def _contract_tensors_using_tccg(tensor_a: Tensor, tensor_b: Tensor) -> Tensor:
-    contracted_indices = get_contracted_indices(tensor_a, tensor_b)
-
-    ordered_final_indicies = []
-    for idx in tensor_a.input_indices:
-        if idx not in contracted_indices:
-            ordered_final_indicies.append(idx)
-    for idx in tensor_b.input_indices:
-        if idx not in contracted_indices:
-            ordered_final_indicies.append(idx)
-
-    _generate_tccg_file(tensor_a, tensor_b, ordered_final_indicies)
-
-    return NotImplemented  # TODO
 
 
 def _generate_tccg_file(
@@ -147,14 +135,9 @@ class TensorContractionOperation(TensorOperation):
         if len(inputs) > 2:
             raise NotImplementedError("Contraction of more than two tensors is not implemented.")
 
-        if use_tccg:
-            return tensor_operation_result_from_tensor(
-                _contract_tensors_using_tccg(inputs[0].tensor, inputs[1].tensor)
-            )
-        else:
-            return tensor_operation_result_from_tensor(
-                _contract_tensors(inputs[0].tensor, inputs[1].tensor)
-            )
+        return tensor_operation_result_from_tensor(
+            _contract_tensors(inputs[0].tensor, inputs[1].tensor, use_tccg=use_tccg)
+        )
 
     def __str__(self) -> str:
         """Return a string representation of the tensor contraction operation."""
