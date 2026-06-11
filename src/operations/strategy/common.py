@@ -4,10 +4,11 @@ from __future__ import annotations
 
 from typing import Collection, overload
 
-from operations.contraction import get_contracted_indices
+from operations.base import TensorOperation
+from operations.contraction import TensorContractionOperation, get_contracted_indices
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.contraction.tree import ContractionTree, ContractionTreeNode
-from operations.permutation import Permutation
+from operations.permutation import Permutation, TensorPermutationOperation
 from operations.permutation.utils import to_permutation
 from tensor import Tensor
 
@@ -190,3 +191,25 @@ def apply_layout_to_tensor(tensor: Tensor, layout: list[int]) -> Permutation:
         The permutation mapping the tensor's current layout to the target layout.
     """
     return to_permutation(tensor.input_indices, layout)
+
+
+def to_tensor_operations(
+    initial_permutations: list[Permutation],
+    intermediate_permutations: list[Permutation],
+    contraction_path: ContractionPath,
+) -> list[TensorOperation]:
+    """Convert strategy permutations and contraction path steps into tensor operations."""
+    if len(intermediate_permutations) != len(contraction_path):
+        raise ValueError(
+            "Intermediate permutations must match the number of contraction path steps."
+        )
+
+    operations: list[TensorOperation] = [
+        TensorPermutationOperation(permutation) for permutation in initial_permutations
+    ]
+
+    for step in range(len(contraction_path)):
+        operations.append(TensorContractionOperation([]))
+        operations.append(TensorPermutationOperation(intermediate_permutations[step]))
+
+    return operations
