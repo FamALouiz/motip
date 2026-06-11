@@ -46,7 +46,7 @@ class TCCGPyBind11Compiler:
 #include <pybind11/numpy.h>
 #define py pybind11 
 
-extern "C" int {self.fn_name}(
+int {self.fn_name}(
     const {self.dtype_str} *A,
     const {self.dtype_str} *B,
     {self.dtype_str} *C,
