@@ -32,6 +32,11 @@ class TensorPermutationOperation(TensorOperation):
         """Initialize the tensor permutation operation."""
         self.__permutation = permutation
 
+    @property
+    def permutation(self) -> Permutation:
+        """Return the permutation applied by this operation."""
+        return self.__permutation
+
     def apply(
         self, *inputs: TensorOperationResult, **kwargs: dict[str, Any]
     ) -> TensorOperationResult:

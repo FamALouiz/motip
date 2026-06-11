@@ -128,6 +128,11 @@ class TensorContractionOperation(TensorOperation):
         """Initialize the tensor contraction operation."""
         self.__sliced_indices = sliced_indices  # TODO: include sliced indices in the operation
 
+    @property
+    def sliced_indices(self) -> list[int]:
+        """Return the sliced indices used by this operation."""
+        return self.__sliced_indices
+
     def apply(
         self,
         *inputs: TensorOperationResult,
