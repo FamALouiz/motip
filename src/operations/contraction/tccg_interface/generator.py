@@ -99,7 +99,4 @@ class TCCGGenerator:
             str(os.cpu_count()),
             "--verbose",
         ]
-        subprocess.run(
-            compiled_command,
-            check=True,
-        )
+        subprocess.run(compiled_command, check=True, capture_output=True)
