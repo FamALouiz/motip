@@ -16,14 +16,14 @@ class IStrategy(Protocol):
     def find_optimal_permutation(
         network: TensorNetwork, contraction_path: ContractionPath
     ) -> list[TensorOperation]:
-        """Find the optimal tensor permutation for a given contraction path.
+        """Find the tensor operations for a given contraction path.
 
         Args:
             network: The tensor network for which to find the optimal permutation.
             contraction_path: The contraction path for which to find the optimal permutation.
 
         Returns:
-            A list of tensor operations representing the optimal permutations.
+            A list of tensor operations representing permutations and contractions.
         """
         ...
 
