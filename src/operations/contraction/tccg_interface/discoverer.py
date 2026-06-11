@@ -1,0 +1,93 @@
+"""TCCG discoverer."""
+
+import re
+from pathlib import Path
+
+import numpy as np
+
+
+class TCCGDiscoverer:
+    """Discovers and parses TCCG-generated function signatures."""
+
+    def __init__(self, tccg_impl_dir: str, tensor_a_dtype: np.dtype, tensor_b_dtype: np.dtype):
+        """Initialize the discoverer with target directory and array dtypes.
+
+        Args:
+            tccg_impl_dir: Path to tccg_implementations directory.
+            tensor_a_dtype: Data type of first tensor array.
+            tensor_b_dtype: Data type of second tensor array.
+        """
+        self.tccg_impl_dir = Path(tccg_impl_dir)
+        self.tensor_a_dtype = tensor_a_dtype
+        self.tensor_b_dtype = tensor_b_dtype
+
+    def _infer_tccg_float_type(self) -> str:
+        """Infer TCCG float type from tensor dtypes.
+
+        Returns:
+            Either 'float' for float32 or 'double' for float64.
+
+        Raises:
+            ValueError: If tensors have different or unsupported dtypes.
+        """
+        if self.tensor_a_dtype != self.tensor_b_dtype:
+            raise ValueError(
+                f"Tensor dtypes must match. Got {self.tensor_a_dtype} and {self.tensor_b_dtype}."
+            )
+
+        if self.tensor_a_dtype == np.float32:
+            return "float"
+        elif self.tensor_a_dtype == np.float64:
+            return "double"
+        else:
+            raise ValueError(f"Unsupported dtype for TCCG: {self.tensor_a_dtype}")
+
+    def _clean_artifacts(self) -> None:
+        """Remove stale .cpp and .so files from tccg_impl_dir."""
+        for pattern in ["*.cpp", "*.so", "*.o"]:
+            for file in self.tccg_impl_dir.glob(pattern):
+                if file.name not in {"ttgemmt.cpp", "ttgemmt.hpp"}:
+                    file.unlink()
+
+    def _parse_function_signature(self, cpp_content: str) -> tuple[str, int]:
+        """Parse generated .cpp to extract function name and parameter count.
+
+        Args:
+            cpp_content: Content of generated .cpp file.
+
+        Returns:
+            Tuple of (function_name, parameter_count).
+
+        Raises:
+            ValueError: If function signature cannot be parsed.
+        """
+        pattern = r"int\s+(\w+)\s*\((.*?)\)"
+        match = re.search(pattern, cpp_content)
+        if not match:
+            raise ValueError("Could not parse function signature from generated .cpp")
+
+        fn_name = match.group(1)
+        params_str = match.group(2)
+        param_count = len([p for p in params_str.split(",") if p.strip()])
+
+        return fn_name, param_count
+
+    def discover(self) -> tuple[str, int, str]:
+        """Clean, generate TCCG, and discover function signature.
+
+        Returns:
+            Tuple of (function_name, parameter_count, cpp_path).
+        """
+        self._clean_artifacts()
+
+        for cpp_file in self.tccg_impl_dir.glob("*.cpp"):
+            if cpp_file.name not in {"ttgemmt.cpp"}:
+                with open(cpp_file, "r") as f:
+                    content = f.read()
+                    fn_name, param_count = self._parse_function_signature(content)
+                    return fn_name, param_count, str(cpp_file)
+
+        raise FileNotFoundError(
+            f"No generated .cpp file found in {self.tccg_impl_dir}. "
+            "Ensure _generate_tccg_file ran successfully."
+        )
