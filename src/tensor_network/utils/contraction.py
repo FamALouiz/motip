@@ -12,6 +12,8 @@ def apply_operations_to_network(
     tensors: list[Tensor],
     operations: list[TensorOperation],
     contraction_path: ContractionPath,
+    use_tccg: bool = True,
+    use_hptt: bool = True,
 ) -> Tensor:
     """Apply a sequence of operations to a network of tensors.
 
@@ -39,6 +41,7 @@ def apply_operations_to_network(
             .apply(
                 tensor_operation_result_from_tensor(tensor_a),
                 tensor_operation_result_from_tensor(tensor_b),
+                use_tccg=use_tccg,
             )
             .tensor
         )
@@ -46,7 +49,7 @@ def apply_operations_to_network(
         perm_op_idx = num_initial_tensors + 2 * step + 1
         permuted_tensor = (
             operations[perm_op_idx]
-            .apply(tensor_operation_result_from_tensor(contracted_tensor))
+            .apply(tensor_operation_result_from_tensor(contracted_tensor), use_hptt=use_hptt)
             .tensor
         )
 
