@@ -4,8 +4,10 @@ from typing import Collection
 
 import pytest
 
+from operations.contraction import TensorContractionOperation
 from operations.contraction.path import PersistentContractionPath
 from operations.contraction.tree import ContractionTree
+from operations.permutation import TensorPermutationOperation
 from operations.strategy.common import (
     build_tree_maps,
     get_input_layout_for_parent_use,
@@ -13,6 +15,7 @@ from operations.strategy.common import (
     get_step_tensors,
     sort_indices_by_layout,
     sort_indices_by_size,
+    to_tensor_operations,
 )
 from tensor_network.tn import TensorNetwork
 
@@ -208,3 +211,33 @@ class TestGetResultLayoutFromCurrentStep:
             0, persistent_path, {0: 4, 1: 3, 2: 2}, left_first=left_first
         )
         assert result == [0, 2] if left_first else [2, 0]
+
+
+class TestToTensorOperations:
+    """Test converting permutations to tensor operations."""
+
+    def test_to_tensor_operations(self) -> None:
+        """Test that the correct tensor operations are returned."""
+        initial_permutations = [[0, 1], [1, 0]]
+        intermediate_permutations = [[0, 2]]
+        contraction_path = [(0, 1)]
+        result = to_tensor_operations(
+            initial_permutations, intermediate_permutations, contraction_path
+        )
+        assert len(result) == 4
+        assert isinstance(result[0], TensorPermutationOperation)
+        assert result[0].permutation == [0, 1]
+        assert isinstance(result[1], TensorPermutationOperation)
+        assert result[1].permutation == [1, 0]
+        assert isinstance(result[2], TensorContractionOperation)
+        assert result[2].sliced_indices == []
+        assert isinstance(result[3], TensorPermutationOperation)
+        assert result[3].permutation == [0, 2]
+
+    def test_to_tensor_operations_with_mismatching_lengths_should_raise(self) -> None:
+        """Test that a ValueError is raised if the lengths of the input lists do not match."""
+        initial_permutations = [[0, 1]]
+        intermediate_permutations = [[0, 2], [2, 0]]
+        contraction_path = [(0, 1)]
+        with pytest.raises(ValueError):
+            to_tensor_operations(initial_permutations, intermediate_permutations, contraction_path)
