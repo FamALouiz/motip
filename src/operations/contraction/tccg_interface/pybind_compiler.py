@@ -121,7 +121,7 @@ PYBIND11_MODULE(tccg_kernel, m) {{
                 "-static",
                 str(wrapper_cpp),
                 str(self.cpp_path),
-                pybind11_includes,
+                *pybind11_includes.split(" "),
                 f"-I{hptt_include}",
                 f"-I{blis_include}",
                 f"-L{hptt_lib}",
@@ -131,7 +131,7 @@ PYBIND11_MODULE(tccg_kernel, m) {{
                 "-o",
                 str(so_temp_path),
             ]
-            subprocess.run(compile_cmd, check=True, capture_output=True)
+            subprocess.run(compile_cmd, check=True)
 
             shutil.move(str(so_temp_path), str(so_path))
 
