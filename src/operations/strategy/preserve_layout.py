@@ -6,8 +6,8 @@ from memory import Memory
 from memory.calculator import MemoryCalculator
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.permutation import Permutation
-from operations.permutation.strategy import IPermutationStrategy
 from operations.permutation.utils import to_identity_permutation
+from operations.strategy import IPermutationStrategy
 from tensor_network.tn import TensorNetwork
 
 

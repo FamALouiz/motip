@@ -4,7 +4,7 @@ import pytest
 
 from memory import Memory
 from operations.contraction.path import ContractionPath
-from operations.permutation.strategy.greedy import GreedyPermutationStrategy
+from operations.strategy.greedy import GreedyPermutationStrategy
 from tensor_network import TensorNetwork
 
 

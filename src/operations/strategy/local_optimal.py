@@ -8,9 +8,9 @@ from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.contraction.tree import ContractionTree, ContractionTreeNode
 from operations.permutation import Permutation
-from operations.permutation.strategy import IPermutationStrategy
-from operations.permutation.strategy.common import get_step_tensors, sort_indices_by_size
 from operations.permutation.utils import to_permutation
+from operations.strategy import IPermutationStrategy
+from operations.strategy.common import get_step_tensors, sort_indices_by_size
 from tensor_network.tn import TensorNetwork
 
 

@@ -4,7 +4,7 @@ import pytest
 
 from memory import Memory
 from operations.contraction.path import ContractionPath
-from operations.permutation.strategy.canonical_free_first import (
+from operations.strategy.canonical_free_first import (
     CanonicalFreeFirstPermutationStrategy,
 )
 from tensor_network import TensorNetwork

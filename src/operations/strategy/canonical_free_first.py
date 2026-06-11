@@ -1,4 +1,4 @@
-"""Canonical contracted-first permutation strategy for tensor network contraction."""
+"""Canonical free-first permutation strategy for tensor network contraction."""
 
 from typing import override
 
@@ -7,24 +7,24 @@ from memory.calculator import MemoryCalculator
 from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.permutation import Permutation
-from operations.permutation.strategy import IPermutationStrategy
-from operations.permutation.strategy.common import (
+from operations.permutation.utils import to_identity_permutation
+from operations.strategy import IPermutationStrategy
+from operations.strategy.common import (
     apply_layout_to_tensor,
     build_tree_maps,
     get_result_layout_from_current_step,
     sort_indices_by_size,
 )
-from operations.permutation.utils import to_identity_permutation
 from tensor import Tensor
 from tensor_network.tn import TensorNetwork
 
 
-def _get_contracted_first_layout(
+def _get_free_first_layout(
     current_tensor: Tensor,
     sibling_tensor: Tensor,
     size_dict: dict[int, int],
 ) -> list[int]:
-    """Build a canonical contracted-first layout for a tensor.
+    """Build a canonical free-first layout for a tensor.
 
     Args:
         current_tensor: The current tensor.
@@ -32,20 +32,20 @@ def _get_contracted_first_layout(
         size_dict: A mapping from index id to dimension size.
 
     Returns:
-        A canonical contracted-first layout.
+        A canonical free-first layout.
     """
     contracted = get_contracted_indices(current_tensor, sibling_tensor)
     free = set(current_tensor.input_indices) - contracted
 
-    contracted_sorted = sort_indices_by_size(contracted, size_dict)
     free_sorted = sort_indices_by_size(free, size_dict)
-    return contracted_sorted + free_sorted
+    contracted_sorted = sort_indices_by_size(contracted, size_dict)
+    return free_sorted + contracted_sorted
 
 
-class CanonicalContractedFirstPermutationStrategy(IPermutationStrategy):
-    """Canonical contracted-first permutation strategy.
+class CanonicalFreeFirstPermutationStrategy(IPermutationStrategy):
+    """Canonical free-first permutation strategy.
 
-    This strategy always places contracted indices before free indices for
+    This strategy always places free indices before contracted indices for
     tensors participating in a contraction.
     """
 
@@ -55,14 +55,14 @@ class CanonicalContractedFirstPermutationStrategy(IPermutationStrategy):
         network: TensorNetwork,
         contraction_path: ContractionPath,
     ) -> tuple[list[Permutation], list[Permutation]]:
-        """Find canonical contracted-first permutations.
+        """Find canonical free-first permutations.
 
         Args:
             network: The tensor network.
             contraction_path: The contraction path.
 
         Returns:
-            Canonical contracted-first permutations for initial and intermediate tensors.
+            Canonical free-first permutations for initial and intermediate tensors.
         """
         persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
         _, leaf_to_node, _ = build_tree_maps(persistent_path)
@@ -77,13 +77,16 @@ class CanonicalContractedFirstPermutationStrategy(IPermutationStrategy):
                 continue
 
             step = leaf_node.parent.contraction_step
-            left_tensor = persistent_path.get_state(step).tensors[contraction_path[step][0]]
-            right_tensor = persistent_path.get_state(step).tensors[contraction_path[step][1]]
+            left_tensor, right_tensor, _ = (
+                persistent_path.get_state(step).tensors[contraction_path[step][0]],
+                persistent_path.get_state(step).tensors[contraction_path[step][1]],
+                None,
+            )
 
             current_tensor = left_tensor if leaf_node.parent.left is leaf_node else right_tensor
             sibling_tensor = right_tensor if leaf_node.parent.left is leaf_node else left_tensor
 
-            layout = _get_contracted_first_layout(
+            layout = _get_free_first_layout(
                 current_tensor,
                 sibling_tensor,
                 network.size_dict,
@@ -94,12 +97,17 @@ class CanonicalContractedFirstPermutationStrategy(IPermutationStrategy):
             )
 
         for step in range(persistent_path.num_steps):
+            _, _, result_tensor = (
+                persistent_path.get_state(step).tensors[contraction_path[step][0]],
+                persistent_path.get_state(step).tensors[contraction_path[step][1]],
+                None,
+            )
             result_tensor = persistent_path.get_state(step + 1).tensors[contraction_path[step][0]]
             result_layout = get_result_layout_from_current_step(
                 step,
                 persistent_path,
                 network.size_dict,
-                left_first=False,
+                left_first=True,
             )
             intermediate_permutations.append(apply_layout_to_tensor(result_tensor, result_layout))
 
@@ -151,6 +159,7 @@ class CanonicalContractedFirstPermutationStrategy(IPermutationStrategy):
                 result_memory = max(result_memory, current_memory)
             else:
                 result_memory += tensor_a_memory + tensor_b_memory + contraction_memory
+
             current_memory -= (
                 tensor_a_memory + tensor_b_memory
             )  # Remove permuted tensors from memory (since they are consumed)
@@ -161,7 +170,7 @@ class CanonicalContractedFirstPermutationStrategy(IPermutationStrategy):
     @override
     def get_peak_memory(network: TensorNetwork, contraction_path: ContractionPath) -> Memory:
         """Calculate the peak memory usage for a given contraction path and tensor permutations."""
-        return CanonicalContractedFirstPermutationStrategy.__calculate_memory_for_path(
+        return CanonicalFreeFirstPermutationStrategy.__calculate_memory_for_path(
             network, contraction_path, peak=True
         )
 
@@ -169,6 +178,6 @@ class CanonicalContractedFirstPermutationStrategy(IPermutationStrategy):
     @override
     def get_total_memory(network: TensorNetwork, contraction_path: ContractionPath) -> Memory:
         """Calculate the total memory movement for a contraction path and tensor permutations."""
-        return CanonicalContractedFirstPermutationStrategy.__calculate_memory_for_path(
+        return CanonicalFreeFirstPermutationStrategy.__calculate_memory_for_path(
             network, contraction_path, peak=False
         )

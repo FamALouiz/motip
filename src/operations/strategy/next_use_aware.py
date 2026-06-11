@@ -6,14 +6,14 @@ from memory import Memory
 from memory.calculator import MemoryCalculator
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.permutation import Permutation
-from operations.permutation.strategy import IPermutationStrategy
-from operations.permutation.strategy.common import (
+from operations.permutation.utils import to_identity_permutation
+from operations.strategy import IPermutationStrategy
+from operations.strategy.common import (
     apply_layout_to_tensor,
     build_tree_maps,
     get_input_layout_for_parent_use,
     sort_indices_by_size,
 )
-from operations.permutation.utils import to_identity_permutation
 from tensor_network.tn import TensorNetwork
 
 

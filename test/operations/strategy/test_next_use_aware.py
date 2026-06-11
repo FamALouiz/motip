@@ -2,7 +2,7 @@
 
 from memory import Memory
 from operations.contraction.path import ContractionPath
-from operations.permutation.strategy.next_use_aware import NextUseAwarePermutationStrategy
+from operations.strategy.next_use_aware import NextUseAwarePermutationStrategy
 from tensor_network import TensorNetwork
 
 

@@ -6,7 +6,7 @@ import pytest
 
 from operations.contraction.path import PersistentContractionPath
 from operations.contraction.tree import ContractionTree
-from operations.permutation.strategy.common import (
+from operations.strategy.common import (
     build_tree_maps,
     get_input_layout_for_parent_use,
     get_result_layout_from_current_step,

@@ -13,14 +13,14 @@ from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.contraction.tree import ContractionTreeNode
 from operations.permutation import Permutation
-from operations.permutation.strategy import IPermutationStrategy
-from operations.permutation.strategy.common import (
+from operations.permutation.utils import to_permutation
+from operations.strategy import IPermutationStrategy
+from operations.strategy.common import (
     build_tree_maps,
     get_step_tensors,
     sort_indices_by_layout,
     sort_indices_by_size,
 )
-from operations.permutation.utils import to_permutation
 from tensor import Tensor
 from tensor_network.tn import TensorNetwork
 

@@ -10,13 +10,13 @@ from memory.calculator import MemoryCalculator
 from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.permutation import Permutation
-from operations.permutation.strategy import IPermutationStrategy
-from operations.permutation.strategy.common import (
+from operations.permutation.utils import to_identity_permutation
+from operations.strategy import IPermutationStrategy
+from operations.strategy.common import (
     apply_layout_to_tensor,
     build_tree_maps,
     get_step_tensors,
 )
-from operations.permutation.utils import to_identity_permutation
 from tensor import Tensor
 from tensor_network.tn import TensorNetwork
 
