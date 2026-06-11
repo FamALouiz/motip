@@ -69,11 +69,10 @@ def _contract_tensors(tensor_a: Tensor, tensor_b: Tensor, use_tccg: bool = False
                     ordered_new_indices,
                     tuple(new_tensor_shape),
                 )
-            except RuntimeError:
-                print("Error occurred TCCG compilation... falling back to normal contraction")
+            except Exception as e:
+                print(e)
+                print("Error occurred with TCCG compilation... falling back to normal contraction")
                 new_array = _contract_tensor_arrays(tensor_a, tensor_b)
-            except:
-                raise
         else:
             new_array = _contract_tensor_arrays(tensor_a, tensor_b)
 
