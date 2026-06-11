@@ -39,13 +39,11 @@ def execute_tccg_contraction(
     compiler = TCCGPyBind11Compiler(cpp_path, fn_name, param_count, dtype_str, has_work)
     so_path = compiler.compile()
 
-    runtime = TCCGRuntime(so_path, fn_name, param_count == 7, tensor_a.array.dtype)
+    runtime = TCCGRuntime(so_path, fn_name, has_work, tensor_a.array.dtype)
 
     tensor_a_f = np.asfortranarray(tensor_a.array)
     tensor_b_f = np.asfortranarray(tensor_b.array)
-    output = runtime.execute_contraction(
-        tensor_a_f, tensor_b_f, ordered_new_indices, new_tensor_shape
-    )
+    output = runtime.execute_contraction(tensor_a_f, tensor_b_f, new_tensor_shape)
 
     shutil.rmtree(tccg_impl_dir)
 
