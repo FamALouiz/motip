@@ -155,3 +155,11 @@ class TensorContractionOperation(TensorOperation):
             return tensor_operation_result_from_tensor(
                 _contract_tensors(inputs[0].tensor, inputs[1].tensor)
             )
+
+    def __str__(self) -> str:
+        """Return a string representation of the tensor contraction operation."""
+        return f"TensorContractionOperation(sliced_indices={self.sliced_indices})"
+
+    def __repr__(self) -> str:
+        """Return a string representation of the tensor contraction operation."""
+        return self.__str__()

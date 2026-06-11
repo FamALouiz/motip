@@ -44,3 +44,11 @@ class TensorPermutationOperation(TensorOperation):
         assert len(inputs) == 1, "TensorPermutationOperation expects exactly one input tensor."
         output = _permute_tensor(inputs[0].tensor, self.__permutation)
         return tensor_operation_result_from_tensor(output)
+
+    def __str__(self) -> str:
+        """Return a string representation of the tensor permutation operation."""
+        return f"TensorPermutationOperation(permutation={self.permutation})"
+
+    def __repr__(self) -> str:
+        """Return a string representation of the tensor permutation operation."""
+        return self.__str__()
