@@ -21,6 +21,7 @@ from operations.strategy.common import (
     get_step_tensors,
     sort_indices_by_layout,
     sort_indices_by_size,
+    to_tensor_operations,
 )
 from tensor import Tensor
 from tensor_network.tn import TensorNetwork
@@ -247,10 +248,7 @@ class GreedyPermutationStrategy(IStrategy):
             step.
 
         Returns:
-            tuple[list[Permutation], list[Permutation]]:
-            A tuple containing two lists:
-                - The first list contains the optimal permutations for the initial tensors.
-                - The second list contains the optimal permutations for the intermediate tensors
+            The tensor operations for the strategy.
         """
         if k <= 0:
             raise ValueError("k must be a positive integer.")
@@ -267,7 +265,11 @@ class GreedyPermutationStrategy(IStrategy):
         intermediate_permutations: list[Permutation] = []
 
         if persistent_path.num_steps == 0:
-            return initial_permutations, intermediate_permutations
+            return to_tensor_operations(
+                initial_permutations,
+                intermediate_permutations,
+                contraction_path,
+            )
 
         for step in range(persistent_path.num_steps):
             _, _, result_tensor = get_step_tensors(persistent_path, step)
@@ -417,7 +419,11 @@ class GreedyPermutationStrategy(IStrategy):
 
         __plan_node(contraction_tree.root)
 
-        return initial_permutations, intermediate_permutations
+        return to_tensor_operations(
+            initial_permutations,
+            intermediate_permutations,
+            contraction_path,
+        )
 
     @staticmethod
     def __calculate_memory_for_path(

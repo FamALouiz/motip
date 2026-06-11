@@ -7,6 +7,7 @@ from typing import override
 
 from memory import Memory
 from memory.calculator import MemoryCalculator
+from operations.base import TensorOperation
 from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.permutation import Permutation
@@ -16,6 +17,7 @@ from operations.strategy.common import (
     apply_layout_to_tensor,
     build_tree_maps,
     get_step_tensors,
+    to_tensor_operations,
 )
 from tensor import Tensor
 from tensor_network.tn import TensorNetwork
@@ -111,7 +113,7 @@ class RandomTTGTPermutationStrategy(IStrategy):
         network: TensorNetwork,
         contraction_path: ContractionPath,
         seed: int = 0,
-    ) -> tuple[list[Permutation], list[Permutation]]:
+    ) -> list[TensorOperation]:
         """Generate random TTGT-style permutations.
 
         Args:
@@ -120,7 +122,7 @@ class RandomTTGTPermutationStrategy(IStrategy):
             seed: The random seed.
 
         Returns:
-            Random TTGT-style permutations for initial and intermediate tensors.
+            Random TTGT-style tensor operations.
         """
         rng = random.Random(seed)
         persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
@@ -158,7 +160,11 @@ class RandomTTGTPermutationStrategy(IStrategy):
             layout = _get_random_result_layout(step, persistent_path, rng)
             intermediate_permutations.append(apply_layout_to_tensor(result_tensor, layout))
 
-        return initial_permutations, intermediate_permutations
+        return to_tensor_operations(
+            initial_permutations,
+            intermediate_permutations,
+            contraction_path,
+        )
 
     @staticmethod
     def __calculate_memory_for_path(

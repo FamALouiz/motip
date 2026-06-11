@@ -4,10 +4,12 @@ from typing import override
 
 from memory import Memory
 from memory.calculator import MemoryCalculator
+from operations.base import TensorOperation
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.permutation import Permutation
 from operations.permutation.utils import to_identity_permutation
 from operations.strategy import IStrategy
+from operations.strategy.common import to_tensor_operations
 from tensor_network.tn import TensorNetwork
 
 
@@ -22,7 +24,7 @@ class PreserveLayoutPermutationStrategy(IStrategy):
     def find_optimal_permutation(
         network: TensorNetwork,
         contraction_path: ContractionPath,
-    ) -> tuple[list[Permutation], list[Permutation]]:
+    ) -> list[TensorOperation]:
         """Return identity permutations for all tensors.
 
         Args:
@@ -36,7 +38,11 @@ class PreserveLayoutPermutationStrategy(IStrategy):
         intermediate_permutations: list[Permutation] = [
             tuple() for _ in range(len(contraction_path))
         ]
-        return initial_permutations, intermediate_permutations
+        return to_tensor_operations(
+            initial_permutations,
+            intermediate_permutations,
+            contraction_path,
+        )
 
     @staticmethod
     @override

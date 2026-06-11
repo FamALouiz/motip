@@ -4,6 +4,7 @@ from typing import override
 
 from memory import Memory
 from memory.calculator import MemoryCalculator
+from operations.base import TensorOperation
 from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.permutation import Permutation
@@ -14,6 +15,7 @@ from operations.strategy.common import (
     build_tree_maps,
     get_result_layout_from_current_step,
     sort_indices_by_size,
+    to_tensor_operations,
 )
 from tensor import Tensor
 from tensor_network.tn import TensorNetwork
@@ -54,7 +56,7 @@ class CanonicalFreeFirstPermutationStrategy(IStrategy):
     def find_optimal_permutation(
         network: TensorNetwork,
         contraction_path: ContractionPath,
-    ) -> tuple[list[Permutation], list[Permutation]]:
+    ) -> list[TensorOperation]:
         """Find canonical free-first permutations.
 
         Args:
@@ -62,7 +64,7 @@ class CanonicalFreeFirstPermutationStrategy(IStrategy):
             contraction_path: The contraction path.
 
         Returns:
-            Canonical free-first permutations for initial and intermediate tensors.
+            Canonical free-first tensor operations.
         """
         persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
         _, leaf_to_node, _ = build_tree_maps(persistent_path)
@@ -111,7 +113,11 @@ class CanonicalFreeFirstPermutationStrategy(IStrategy):
             )
             intermediate_permutations.append(apply_layout_to_tensor(result_tensor, result_layout))
 
-        return initial_permutations, intermediate_permutations
+        return to_tensor_operations(
+            initial_permutations,
+            intermediate_permutations,
+            contraction_path,
+        )
 
     @staticmethod
     def __calculate_memory_for_path(

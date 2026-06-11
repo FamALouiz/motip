@@ -4,6 +4,7 @@ from typing import override
 
 from memory import Memory
 from memory.calculator import MemoryCalculator
+from operations.base import TensorOperation
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.permutation import Permutation
 from operations.permutation.utils import to_identity_permutation
@@ -13,6 +14,7 @@ from operations.strategy.common import (
     build_tree_maps,
     get_input_layout_for_parent_use,
     sort_indices_by_size,
+    to_tensor_operations,
 )
 from tensor_network.tn import TensorNetwork
 
@@ -29,7 +31,7 @@ class NextUseAwarePermutationStrategy(IStrategy):
     def find_optimal_permutation(
         network: TensorNetwork,
         contraction_path: ContractionPath,
-    ) -> tuple[list[Permutation], list[Permutation]]:
+    ) -> list[TensorOperation]:
         """Find next-use-aware permutations.
 
         Args:
@@ -37,8 +39,25 @@ class NextUseAwarePermutationStrategy(IStrategy):
             contraction_path: The contraction path.
 
         Returns:
-            Next-use-aware permutations for initial and intermediate tensors.
+            Next-use-aware tensor operations.
         """
+        initial_permutations, intermediate_permutations = (
+            NextUseAwarePermutationStrategy.__find_optimal_permutations(
+                network,
+                contraction_path,
+            )
+        )
+        return to_tensor_operations(
+            initial_permutations,
+            intermediate_permutations,
+            contraction_path,
+        )
+
+    @staticmethod
+    def __find_optimal_permutations(
+        network: TensorNetwork,
+        contraction_path: ContractionPath,
+    ) -> tuple[list[Permutation], list[Permutation]]:
         persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
         _, leaf_to_node, step_to_node = build_tree_maps(persistent_path)
 
@@ -100,7 +119,7 @@ class NextUseAwarePermutationStrategy(IStrategy):
         memory_calculator = MemoryCalculator()
         persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
         initial_permutations, intermediate_permutations = (
-            NextUseAwarePermutationStrategy.find_optimal_permutation(network, contraction_path)
+            NextUseAwarePermutationStrategy.__find_optimal_permutations(network, contraction_path)
         )
 
         current_memory = memory_calculator.calculate_memory_for_tensors(network.tensors)

@@ -4,13 +4,14 @@ from typing import override
 
 from memory import Memory
 from memory.calculator import MemoryCalculator
+from operations.base import TensorOperation
 from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.contraction.tree import ContractionTree, ContractionTreeNode
 from operations.permutation import Permutation
 from operations.permutation.utils import to_permutation
 from operations.strategy import IStrategy
-from operations.strategy.common import get_step_tensors, sort_indices_by_size
+from operations.strategy.common import get_step_tensors, sort_indices_by_size, to_tensor_operations
 from tensor_network.tn import TensorNetwork
 
 
@@ -46,7 +47,7 @@ class LocalOptimalPermutationStrategy(IStrategy):
     @override
     def find_optimal_permutation(
         network: TensorNetwork, contraction_path: ContractionPath
-    ) -> tuple[list[Permutation], list[Permutation]]:
+    ) -> list[TensorOperation]:
         persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
         persistent_tree = ContractionTree.from_contraction_path(persistent_path)
 
@@ -100,7 +101,11 @@ class LocalOptimalPermutationStrategy(IStrategy):
             permutation = to_permutation(result_tensor.input_indices, result_layout)
             intermediate_permutations.append(permutation)
 
-        return initial_permutations, intermediate_permutations
+        return to_tensor_operations(
+            initial_permutations,
+            intermediate_permutations,
+            contraction_path,
+        )
 
     @staticmethod
     def __calculate_memory_for_path(
