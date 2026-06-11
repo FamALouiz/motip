@@ -1,6 +1,7 @@
 """TCCG runtime integration."""
 
 import importlib.util
+from pathlib import Path
 
 import numpy as np
 
@@ -26,7 +27,9 @@ class TCCGRuntime:
     def _load_module(self) -> None:
         """Load compiled extension module dynamically."""
         if self.module is None:
-            spec = importlib.util.spec_from_file_location("tccg_kernel", self.so_path)
+            spec = importlib.util.spec_from_file_location(
+                Path(self.so_path).name.removesuffix(".so"), self.so_path
+            )
             if spec is None or spec.loader is None:
                 raise ImportError(f"Could not load spec from {self.so_path}")
             self.module = importlib.util.module_from_spec(spec)
@@ -36,7 +39,6 @@ class TCCGRuntime:
         self,
         tensor_a: np.ndarray,
         tensor_b: np.ndarray,
-        ordered_new_indices: list[int],
         new_tensor_shape: tuple[int, ...],
     ) -> np.ndarray:
         """Execute TCCG contraction with workspace management.
@@ -44,7 +46,6 @@ class TCCGRuntime:
         Args:
             tensor_a: First input tensor in Fortran order.
             tensor_b: Second input tensor in Fortran order.
-            ordered_new_indices: Indices for output tensor (unused).
             new_tensor_shape: Shape of output tensor.
 
         Returns:

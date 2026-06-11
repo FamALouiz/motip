@@ -18,6 +18,8 @@ BLIS_ROOT = Path(os.environ["BLIS_ROOT"])
 class TCCGPyBind11Compiler:
     """Generates and compiles pybind11 wrapper for TCCG functions."""
 
+    so_counter = 0
+
     def __init__(
         self, cpp_path: str, fn_name: str, param_count: int, dtype_str: str, has_work: bool
     ):
@@ -87,7 +89,7 @@ int {self.fn_name}_wrapper(MatrixType A, MatrixType B, MatrixType C, {self.dtype
         wrapper_source += f"""
 }}
 
-PYBIND11_MODULE(tccg_kernel, m) {{
+PYBIND11_MODULE(tccg_kernel_{TCCGPyBind11Compiler.so_counter}, m) {{
     m.def("{self.fn_name}", &{self.fn_name}_wrapper, "TCCG kernel contraction");
 }}
 """
@@ -109,7 +111,7 @@ PYBIND11_MODULE(tccg_kernel, m) {{
             hptt_lib = HPTT_ROOT / "lib"
             blis_lib = BLIS_ROOT / "lib"
 
-            so_path = self.cpp_path.parent / "tccg_kernel.so"
+            so_path = self.cpp_path.parent / f"tccg_kernel_{TCCGPyBind11Compiler.so_counter}.so"
 
             pybind11_includes = subprocess.check_output(
                 ["python", "-m", "pybind11", "--includes"],
@@ -127,6 +129,7 @@ PYBIND11_MODULE(tccg_kernel, m) {{
             compile_cmd = [
                 "g++",
                 "-O3",
+                "-Wno-narrowing",
                 "-fPIC",
                 "-shared",
                 str(wrapper_cpp),
@@ -145,5 +148,6 @@ PYBIND11_MODULE(tccg_kernel, m) {{
             subprocess.run(compile_cmd, check=True)
 
             shutil.move(str(so_temp_path), str(so_path))
+            TCCGPyBind11Compiler.so_counter += 1
 
             return str(so_path)
