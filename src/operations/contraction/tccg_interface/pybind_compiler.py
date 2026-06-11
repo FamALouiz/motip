@@ -125,7 +125,7 @@ PYBIND11_MODULE(tccg_kernel, m) {{
                 "g++",
                 "-O3",
                 "-fPIC",
-                "-static",
+                "-shared",
                 str(wrapper_cpp),
                 str(self.cpp_path),
                 *pybind11_includes.split(" "),
@@ -135,6 +135,7 @@ PYBIND11_MODULE(tccg_kernel, m) {{
                 f"-L{blis_lib}",
                 "-lhptt",
                 "-lblis",
+                f"-Wl,-rpath,{blis_lib}",
                 "-o",
                 str(so_temp_path),
             ]
