@@ -129,7 +129,7 @@ class TensorContractionOperation(TensorOperation):
         **kwargs: dict[str, Any],
     ) -> TensorOperationResult:
         """Apply the tensor contraction operation."""
-        use_tccg = kwargs.get("use_tccg", False)
+        use_tccg: bool = kwargs.get("use_tccg", False)
         if len(inputs) < 2:
             raise ValueError("At least two tensors are required for contraction.")
         if len(inputs) > 2:
