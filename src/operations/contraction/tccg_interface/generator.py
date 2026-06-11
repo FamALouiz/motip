@@ -2,6 +2,7 @@
 
 import os
 import subprocess
+from importlib import util
 from pathlib import Path
 
 import numpy as np
@@ -9,6 +10,8 @@ import numpy as np
 from tensor import Tensor
 
 # ruff: noqa: E501
+if not util.find_spec("tccg"):
+    raise EnvironmentError("tccg must be installed and TCCG_ROOT should be set")
 
 
 class TCCGGenerator:

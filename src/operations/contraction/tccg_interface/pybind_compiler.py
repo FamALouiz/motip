@@ -1,11 +1,18 @@
 """TCCG pybind11 wrapper compiler."""
 
+import os
 import shutil
 import subprocess
 import tempfile
 from pathlib import Path
 
 # ruff: noqa: E501
+
+if not os.environ["HPTT_ROOT"] or not os.environ["BLIS_ROOT"]:
+    raise EnvironmentError("HPTT_ROOT and BLIS_ROOT env variables should be set")
+
+HPTT_ROOT = Path(os.environ["HPTT_ROOT"])
+BLIS_ROOT = Path(os.environ["BLIS_ROOT"])
 
 
 class TCCGPyBind11Compiler:
@@ -94,11 +101,10 @@ PYBIND11_MODULE(tccg_kernel, m) {{
             wrapper_cpp = temp_path / "wrapper.cpp"
             wrapper_cpp.write_text(self._generate_wrapper_source())
 
-            project_root = self.cpp_path.parent.parent.parent.parent
-            hptt_include = project_root / "libs" / "hptt" / "include"
-            blis_include = project_root / "libs" / "blis" / "include"
-            hptt_lib = project_root / "libs" / "hptt" / "lib"
-            blis_lib = project_root / "libs" / "blis" / "lib"
+            hptt_include = HPTT_ROOT / "include"
+            blis_include = BLIS_ROOT / "include"
+            hptt_lib = HPTT_ROOT / "lib"
+            blis_lib = BLIS_ROOT / "lib"
 
             so_path = self.cpp_path.parent / "tccg_kernel.so"
 
