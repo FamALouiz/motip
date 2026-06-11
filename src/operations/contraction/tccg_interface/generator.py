@@ -6,6 +6,8 @@ from pathlib import Path
 
 import numpy as np
 
+from tensor import Tensor
+
 # ruff: noqa: E501
 
 
@@ -37,12 +39,14 @@ class TCCGGenerator:
         raise ValueError(f"Unsupported dtype for TCCG generation: {dtype}")
 
     @staticmethod
+    def _convert_index(index: int) -> str:
+        return TCCGGenerator._idx_to_char(index) if isinstance(index, int) else str(index)
+
+    @staticmethod
     def generate_tccg_file(
-        tensor_a: np.ndarray,
-        tensor_b: np.ndarray,
+        tensor_a: Tensor,
+        tensor_b: Tensor,
         ordered_new_indices: list[int],
-        tensor_a_indices: list[int] | None = None,
-        tensor_b_indices: list[int] | None = None,
         tccg_impl_dir: str = "tccg_implementations",
     ) -> None:
         """Generate TCCG .cpp file for the given contraction pattern.
@@ -65,35 +69,20 @@ class TCCGGenerator:
                 f"{tensor_a.dtype} != {tensor_b.dtype}"
             )
 
-        tensor_a_indices = (
-            list(range(tensor_a.ndim)) if tensor_a_indices is None else tensor_a_indices
-        )
-        tensor_b_indices = (
-            list(range(tensor_b.ndim)) if tensor_b_indices is None else tensor_b_indices
-        )
-
-        if len(tensor_a_indices) != tensor_a.ndim:
-            raise ValueError("tensor_a_indices must match tensor_a.ndim")
-        if len(tensor_b_indices) != tensor_b.ndim:
-            raise ValueError("tensor_b_indices must match tensor_b.ndim")
-
-        def convert_index(index: int) -> str:
-            return TCCGGenerator._idx_to_char(index) if isinstance(index, int) else str(index)
-
         combined_size: dict[str, int] = {}
-        for idx, size in zip(tensor_a_indices, tensor_a.shape, strict=True):
-            combined_size[convert_index(idx)] = int(size)
-        for idx, size in zip(tensor_b_indices, tensor_b.shape, strict=True):
-            key = convert_index(idx)
+        for idx, size in zip(tensor_a.input_indices, tensor_a.shape, strict=True):
+            combined_size[TCCGGenerator._convert_index(idx)] = int(size)
+        for idx, size in zip(tensor_b.input_indices, tensor_b.shape, strict=True):
+            key = TCCGGenerator._convert_index(idx)
             if key in combined_size and combined_size[key] != int(size):
                 raise ValueError(
                     f"Mismatched sizes for index {idx}: {combined_size[key]} != {size}"
                 )
             combined_size[key] = int(size)
 
-        output_indices = [convert_index(idx) for idx in ordered_new_indices]
-        input_a_indices = [convert_index(idx) for idx in tensor_a_indices]
-        input_b_indices = [convert_index(idx) for idx in tensor_b_indices]
+        output_indices = [TCCGGenerator._convert_index(idx) for idx in ordered_new_indices]
+        input_a_indices = [TCCGGenerator._convert_index(idx) for idx in tensor_a.input_indices]
+        input_b_indices = [TCCGGenerator._convert_index(idx) for idx in tensor_b.input_indices]
 
         tccg_input_path = implementation_dir / "tccg_input.tccg"
         with open(tccg_input_path, "w") as handle:
