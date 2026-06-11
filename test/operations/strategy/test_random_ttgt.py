@@ -8,6 +8,7 @@ from memory import Memory
 from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath
 from operations.strategy.random_ttgt import RandomTTGTPermutationStrategy
+from test.operations.strategy.helpers import extract_strategy_permutations
 from tensor_network import TensorNetwork
 
 
@@ -62,8 +63,13 @@ class TestRandomTTGTPermutationStrategy:
         network = single_step_network
         contraction_path: ContractionPath = [(0, 1)]
 
-        initial_perms, intermediate_perms = RandomTTGTPermutationStrategy.find_optimal_permutation(
+        operations = RandomTTGTPermutationStrategy.find_optimal_permutation(
             network, contraction_path, seed=1
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         left_tensor = network.tensors[0]
@@ -90,13 +96,22 @@ class TestRandomTTGTPermutationStrategy:
         network = two_tensor_multi_free_network
         contraction_path: ContractionPath = [(0, 1)]
 
-        first_initial, first_intermediate = RandomTTGTPermutationStrategy.find_optimal_permutation(
+        first_operations = RandomTTGTPermutationStrategy.find_optimal_permutation(
             network, contraction_path, seed=42
         )
-        second_initial, second_intermediate = (
-            RandomTTGTPermutationStrategy.find_optimal_permutation(
-                network, contraction_path, seed=42
-            )
+        second_operations = RandomTTGTPermutationStrategy.find_optimal_permutation(
+            network, contraction_path, seed=42
+        )
+
+        first_initial, first_intermediate = extract_strategy_permutations(
+            first_operations,
+            len(network.tensors),
+            contraction_path,
+        )
+        second_initial, second_intermediate = extract_strategy_permutations(
+            second_operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert first_initial == second_initial
@@ -109,11 +124,21 @@ class TestRandomTTGTPermutationStrategy:
         network = two_tensor_multi_free_network
         contraction_path: ContractionPath = [(0, 1)]
 
-        seed_zero_output = RandomTTGTPermutationStrategy.find_optimal_permutation(
+        seed_zero_operations = RandomTTGTPermutationStrategy.find_optimal_permutation(
             network, contraction_path, seed=0
         )
-        seed_one_output = RandomTTGTPermutationStrategy.find_optimal_permutation(
+        seed_one_operations = RandomTTGTPermutationStrategy.find_optimal_permutation(
             network, contraction_path, seed=1
+        )
+        seed_zero_output = extract_strategy_permutations(
+            seed_zero_operations,
+            len(network.tensors),
+            contraction_path,
+        )
+        seed_one_output = extract_strategy_permutations(
+            seed_one_operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert seed_zero_output != seed_one_output
@@ -125,8 +150,13 @@ class TestRandomTTGTPermutationStrategy:
         network = two_tensor_multi_free_network
         contraction_path: ContractionPath = [(0, 1)]
 
-        initial_perms, intermediate_perms = RandomTTGTPermutationStrategy.find_optimal_permutation(
+        operations = RandomTTGTPermutationStrategy.find_optimal_permutation(
             network, contraction_path, seed=1
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert initial_perms == [(1, 0, 2), (0, 2, 1)]

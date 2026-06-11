@@ -5,6 +5,7 @@ import pytest
 from memory import Memory
 from operations.contraction.path import ContractionPath
 from operations.strategy.preserve_layout import PreserveLayoutPermutationStrategy
+from test.operations.strategy.helpers import extract_strategy_permutations
 from tensor_network import TensorNetwork
 
 
@@ -54,8 +55,13 @@ class TestPreserveLayoutPermutationStrategy:
         network = single_step_network
         contraction_path: ContractionPath = [(0, 1)]
 
-        initial_perms, intermediate_perms = (
-            PreserveLayoutPermutationStrategy.find_optimal_permutation(network, contraction_path)
+        operations = PreserveLayoutPermutationStrategy.find_optimal_permutation(
+            network, contraction_path
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert initial_perms == [(0, 1), (0, 1)]
@@ -68,8 +74,13 @@ class TestPreserveLayoutPermutationStrategy:
         network = two_step_chain_network
         contraction_path: ContractionPath = [(0, 1), (0, 1)]
 
-        initial_perms, intermediate_perms = (
-            PreserveLayoutPermutationStrategy.find_optimal_permutation(network, contraction_path)
+        operations = PreserveLayoutPermutationStrategy.find_optimal_permutation(
+            network, contraction_path
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert len(initial_perms) == 3

@@ -5,6 +5,7 @@ import pytest
 from memory import Memory
 from operations.contraction.path import ContractionPath
 from operations.strategy.greedy import GreedyPermutationStrategy
+from test.operations.strategy.helpers import extract_strategy_permutations
 from tensor_network import TensorNetwork
 
 
@@ -65,8 +66,13 @@ class TestGreedyPermutationStrategy:
         network = single_step_network
         contraction_path: ContractionPath = [(0, 1)]
 
-        initial_perms, intermediate_perms = GreedyPermutationStrategy.find_optimal_permutation(
+        operations = GreedyPermutationStrategy.find_optimal_permutation(
             network, contraction_path
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert initial_perms == [(0, 1), (0, 1)]
@@ -79,8 +85,13 @@ class TestGreedyPermutationStrategy:
         network = three_tensor_chain_network
         contraction_path: ContractionPath = [(0, 1), (0, 1)]
 
-        initial_perms, intermediate_perms = GreedyPermutationStrategy.find_optimal_permutation(
+        operations = GreedyPermutationStrategy.find_optimal_permutation(
             network, contraction_path
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert initial_perms == [(0, 1), (0, 1), (0, 1)]
@@ -93,8 +104,13 @@ class TestGreedyPermutationStrategy:
         network = multi_shared_index_network
         contraction_path: ContractionPath = [(0, 1)]
 
-        initial_perms, intermediate_perms = GreedyPermutationStrategy.find_optimal_permutation(
+        operations = GreedyPermutationStrategy.find_optimal_permutation(
             network, contraction_path
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert initial_perms == [(0, 1, 2), (0, 2, 1)]
@@ -105,8 +121,13 @@ class TestGreedyPermutationStrategy:
         network = peak_chain_network
         contraction_path: ContractionPath = [(0, 1), (0, 1)]
 
-        initial_perms, intermediate_perms = GreedyPermutationStrategy.find_optimal_permutation(
+        operations = GreedyPermutationStrategy.find_optimal_permutation(
             network, contraction_path
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert initial_perms == [(2, 0, 1), (0, 1), (0, 1)]
@@ -123,8 +144,13 @@ class TestGreedyPermutationStrategy:
         )
         contraction_path: ContractionPath = []
 
-        initial_perms, intermediate_perms = GreedyPermutationStrategy.find_optimal_permutation(
+        operations = GreedyPermutationStrategy.find_optimal_permutation(
             network, contraction_path
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert initial_perms == [(0, 1, 2)]
@@ -141,8 +167,13 @@ class TestGreedyPermutationStrategy:
         )
         contraction_path: ContractionPath = [(0, 1), (0, 1), (0, 1)]
 
-        initial_perms, intermediate_perms = GreedyPermutationStrategy.find_optimal_permutation(
+        operations = GreedyPermutationStrategy.find_optimal_permutation(
             network, contraction_path, k=2
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert initial_perms == [(0, 2, 4, 1, 3), (0, 1), (0, 1), (0, 1, 2, 3, 4)]

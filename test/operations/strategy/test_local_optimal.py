@@ -3,6 +3,7 @@
 from memory import Memory
 from operations.contraction.path import ContractionPath
 from operations.strategy.local_optimal import LocalOptimalPermutationStrategy
+from test.operations.strategy.helpers import extract_strategy_permutations
 from tensor_network import TensorNetwork
 
 
@@ -20,8 +21,13 @@ class TestLocalOptimalPermutationStrategy:
         )
         contraction_path: ContractionPath = [(0, 1)]
 
-        initial_perms, intermediate_perms = (
-            LocalOptimalPermutationStrategy.find_optimal_permutation(network, contraction_path)
+        operations = LocalOptimalPermutationStrategy.find_optimal_permutation(
+            network, contraction_path
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert len(initial_perms) == 2
@@ -42,8 +48,13 @@ class TestLocalOptimalPermutationStrategy:
         )
         contraction_path: ContractionPath = [(0, 1), (0, 1)]
 
-        initial_perms, intermediate_perms = (
-            LocalOptimalPermutationStrategy.find_optimal_permutation(network, contraction_path)
+        operations = LocalOptimalPermutationStrategy.find_optimal_permutation(
+            network, contraction_path
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert len(initial_perms) == 3
@@ -60,8 +71,13 @@ class TestLocalOptimalPermutationStrategy:
         )
         contraction_path: ContractionPath = [(0, 1)]
 
-        initial_perms, intermediate_perms = (
-            LocalOptimalPermutationStrategy.find_optimal_permutation(network, contraction_path)
+        operations = LocalOptimalPermutationStrategy.find_optimal_permutation(
+            network, contraction_path
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         for perm in initial_perms:
@@ -81,8 +97,13 @@ class TestLocalOptimalPermutationStrategy:
         )
         contraction_path: ContractionPath = [(0, 1)]
 
-        initial_perms, intermediate_perms = (
-            LocalOptimalPermutationStrategy.find_optimal_permutation(network, contraction_path)
+        operations = LocalOptimalPermutationStrategy.find_optimal_permutation(
+            network, contraction_path
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert len(intermediate_perms) == 1
@@ -100,8 +121,13 @@ class TestLocalOptimalPermutationStrategy:
         )
         contraction_path: ContractionPath = [(0, 1)]
 
-        initial_perms, intermediate_perms = (
-            LocalOptimalPermutationStrategy.find_optimal_permutation(network, contraction_path)
+        operations = LocalOptimalPermutationStrategy.find_optimal_permutation(
+            network, contraction_path
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert len(intermediate_perms) == 1
@@ -118,8 +144,13 @@ class TestLocalOptimalPermutationStrategy:
         )
         contraction_path: ContractionPath = [(0, 1), (0, 1), (0, 1)]
 
-        initial_perms, intermediate_perms = (
-            LocalOptimalPermutationStrategy.find_optimal_permutation(network, contraction_path)
+        operations = LocalOptimalPermutationStrategy.find_optimal_permutation(
+            network, contraction_path
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert len(initial_perms) == 4
@@ -136,8 +167,13 @@ class TestLocalOptimalPermutationStrategy:
         )
         contraction_path: ContractionPath = []
 
-        initial_perms, intermediate_perms = (
-            LocalOptimalPermutationStrategy.find_optimal_permutation(network, contraction_path)
+        operations = LocalOptimalPermutationStrategy.find_optimal_permutation(
+            network, contraction_path
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert len(initial_perms) == 1
@@ -155,8 +191,13 @@ class TestLocalOptimalPermutationStrategy:
         )
         contraction_path: ContractionPath = [(0, 1)]
 
-        initial_perms, intermediate_perms = (
-            LocalOptimalPermutationStrategy.find_optimal_permutation(network, contraction_path)
+        operations = LocalOptimalPermutationStrategy.find_optimal_permutation(
+            network, contraction_path
+        )
+        initial_perms, intermediate_perms = extract_strategy_permutations(
+            operations,
+            len(network.tensors),
+            contraction_path,
         )
 
         assert len(initial_perms) == 2
