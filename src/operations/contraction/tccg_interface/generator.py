@@ -63,10 +63,10 @@ class TCCGGenerator:
         implementation_dir.mkdir(parents=True, exist_ok=True)
         TCCGGenerator._clean_generated_artifacts(implementation_dir)
 
-        if tensor_a.dtype != tensor_b.dtype:
+        if tensor_a.array.dtype != tensor_b.array.dtype:
             raise ValueError(
                 f"Tensor dtypes must match for TCCG generation: "
-                f"{tensor_a.dtype} != {tensor_b.dtype}"
+                f"{tensor_a.array.dtype} != {tensor_b.array.dtype}"
             )
 
         combined_size: dict[str, int] = {}

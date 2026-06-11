@@ -63,8 +63,8 @@ def _contract_tensors(tensor_a: Tensor, tensor_b: Tensor, use_tccg: bool = False
     if tensor_a.array is not None and tensor_b.array is not None:
         if use_tccg:
             new_array = execute_tccg_contraction(
-                tensor_a.array,
-                tensor_b.array,
+                tensor_a,
+                tensor_b,
                 ordered_new_indices,
                 tuple(new_tensor_shape),
             )
