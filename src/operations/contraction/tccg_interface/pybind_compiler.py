@@ -34,6 +34,7 @@ class TCCGPyBind11Compiler:
         """
         wrapper_source = f"""#include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
+#define py pybind11 
 
 extern "C" int {self.fn_name}(
     const {self.dtype_str} *A,
