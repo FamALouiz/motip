@@ -91,6 +91,7 @@ class TCCGGenerator:
             "tccg",
             str(tccg_input_path),
             "--noLoG",
+            "--keep",
             "--compiler",
             "g++",
             "--numThreads",
