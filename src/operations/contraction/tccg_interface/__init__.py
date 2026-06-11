@@ -1,6 +1,6 @@
 """TCCG interface for tensor contraction operations."""
 
-import os
+import shutil
 
 import numpy as np
 
@@ -47,6 +47,6 @@ def execute_tccg_contraction(
         tensor_a_f, tensor_b_f, ordered_new_indices, new_tensor_shape
     )
 
-    os.rmdir(tccg_impl_dir)
+    shutil.rmtree(tccg_impl_dir)
 
     return output

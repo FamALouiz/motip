@@ -93,8 +93,6 @@ class TCCGGenerator:
             "--noLoG",
             "--compiler",
             "g++",
-            "--maxImplementations",
-            "1",
             "--numThreads",
             str(os.cpu_count()),
             "--verbose",
