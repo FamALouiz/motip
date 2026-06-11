@@ -41,7 +41,7 @@ def apply_operations_to_network(
             .apply(
                 tensor_operation_result_from_tensor(tensor_a),
                 tensor_operation_result_from_tensor(tensor_b),
-                use_tccg=use_tccg,
+                use_tccg=use_tccg,  # type: ignore[arg-type]
             )
             .tensor
         )
@@ -49,7 +49,7 @@ def apply_operations_to_network(
         perm_op_idx = num_initial_tensors + 2 * step + 1
         permuted_tensor = (
             operations[perm_op_idx]
-            .apply(tensor_operation_result_from_tensor(contracted_tensor), use_hptt=use_hptt)
+            .apply(tensor_operation_result_from_tensor(contracted_tensor), use_hptt=use_hptt)  # type: ignore[arg-type]
             .tensor
         )
 

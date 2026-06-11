@@ -32,7 +32,7 @@ class TestApplyOperationsToNetwork:
         perm_after = TensorPermutationOperation([1, 0])
         ops = initial_ops + [contraction_op, perm_after]
         path: ContractionPath = [(0, 1)]
-        result = apply_operations_to_network([a, b], ops, path)
+        result = apply_operations_to_network([a, b], ops, path, use_tccg=False)
         expected_contracted = np.tensordot(a.array, b.array, axes=((1,), (0,)))
         expected_permuted = np.transpose(expected_contracted, (1, 0))
         assert result.input_indices == [2, 0]

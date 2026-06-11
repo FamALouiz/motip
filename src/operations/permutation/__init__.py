@@ -48,7 +48,8 @@ class TensorPermutationOperation(TensorOperation):
         self, *inputs: TensorOperationResult, **kwargs: dict[str, Any]
     ) -> TensorOperationResult:
         """Apply the tensor permutation operation."""
-        use_hptt: bool = kwargs.get("use_hptt", False)
+        use_hptt = kwargs.get("use_hptt", False)
+        assert isinstance(use_hptt, bool)
         assert len(inputs) == 1, "TensorPermutationOperation expects exactly one input tensor."
         output = _permute_tensor(inputs[0].tensor, self.__permutation, use_hptt=use_hptt)
         return tensor_operation_result_from_tensor(output)
