@@ -86,13 +86,13 @@ def _generate_tccg_file(
 
     combined_size_dict = {}
     for idx, size in zip(tensor_a.input_indices, tensor_a.shape, strict=True):
-        combined_size_dict[_idx_to_char(idx)] = size
+        combined_size_dict[_idx_to_char(idx) if isinstance(idx, int) else idx] = size
     for idx, size in zip(tensor_b.input_indices, tensor_b.shape, strict=True):
-        combined_size_dict[_idx_to_char(idx)] = size
+        combined_size_dict[_idx_to_char(idx) if isinstance(idx, int) else idx] = size
     with TemporaryDirectory() as temp_dir:
         with open(os.path.join(temp_dir, "tccg_input.tccg"), "w") as f:
             f.write(
-                f"C[{','.join(map(lambda x: _idx_to_char(x), ordered_final_indicies))}] = A[{','.join(map(lambda x: _idx_to_char(x), tensor_a.input_indices))}] * B[{','.join(map(lambda x: _idx_to_char(x), tensor_b.input_indices))}]\n"  # noqa: E501
+                f"C[{','.join(map(lambda x: _idx_to_char(x) if isinstance(x, int) else x, ordered_final_indicies))}] = A[{','.join(map(lambda x: _idx_to_char(x) if isinstance(x, int) else x, tensor_a.input_indices))}] * B[{','.join(map(lambda x: _idx_to_char(x) if isinstance(x, int) else x, tensor_b.input_indices))}]\n"  # noqa: E501
             )
             for key, value in combined_size_dict.items():
                 f.write(f"{key} = {value}\n")
