@@ -42,13 +42,6 @@ class TCCGDiscoverer:
         else:
             raise ValueError(f"Unsupported dtype for TCCG: {self.tensor_a_dtype}")
 
-    def _clean_artifacts(self) -> None:
-        """Remove stale .cpp and .so files from tccg_impl_dir."""
-        for pattern in ["*.cpp", "*.so", "*.o"]:
-            for file in self.tccg_impl_dir.glob(pattern):
-                if file.name not in {"ttgemmt.cpp", "ttgemmt.hpp"}:
-                    file.unlink()
-
     def _parse_function_signature(self, cpp_content: str) -> tuple[str, int]:
         """Parse generated .cpp to extract function name and parameter count.
 
@@ -78,14 +71,11 @@ class TCCGDiscoverer:
         Returns:
             Tuple of (function_name, parameter_count, cpp_path).
         """
-        self._clean_artifacts()
-
         for cpp_file in self.tccg_impl_dir.glob("*.cpp"):
-            if cpp_file.name not in {"ttgemmt.cpp"}:
-                with open(cpp_file, "r") as f:
-                    content = f.read()
-                    fn_name, param_count = self._parse_function_signature(content)
-                    return fn_name, param_count, str(cpp_file)
+            with open(cpp_file, "r") as f:
+                content = f.read()
+                fn_name, param_count = self._parse_function_signature(content)
+                return fn_name, param_count, str(cpp_file)
 
         raise FileNotFoundError(
             f"No generated .cpp file found in {self.tccg_impl_dir}. "

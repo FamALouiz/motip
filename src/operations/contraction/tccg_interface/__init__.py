@@ -1,5 +1,7 @@
 """TCCG interface for tensor contraction operations."""
 
+import os
+
 import numpy as np
 
 from operations.contraction.tccg_interface.discoverer import TCCGDiscoverer
@@ -44,5 +46,7 @@ def execute_tccg_contraction(
     output = runtime.execute_contraction(
         tensor_a_f, tensor_b_f, ordered_new_indices, new_tensor_shape
     )
+
+    os.rmdir(tccg_impl_dir)
 
     return output

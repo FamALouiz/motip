@@ -131,7 +131,6 @@ PYBIND11_MODULE(tccg_kernel, m) {{
                 "-o",
                 str(so_temp_path),
             ]
-
             subprocess.run(compile_cmd, check=True, capture_output=True)
 
             shutil.move(str(so_temp_path), str(so_path))

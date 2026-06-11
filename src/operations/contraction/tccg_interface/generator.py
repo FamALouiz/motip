@@ -24,13 +24,6 @@ class TCCGGenerator:
         return result.lower()
 
     @staticmethod
-    def _clean_generated_artifacts(tccg_impl_dir: Path) -> None:
-        for pattern in ["*.cpp", "*.so", "*.o", "*.tccg"]:
-            for file in tccg_impl_dir.glob(pattern):
-                if file.name not in {"ttgemmt.cpp", "ttgemmt.hpp"}:
-                    file.unlink()
-
-    @staticmethod
     def _infer_tccg_float_type(dtype: np.dtype) -> str:
         if dtype == np.float32:
             return "float"
@@ -61,7 +54,6 @@ class TCCGGenerator:
         """
         implementation_dir = Path(tccg_impl_dir)
         implementation_dir.mkdir(parents=True, exist_ok=True)
-        TCCGGenerator._clean_generated_artifacts(implementation_dir)
 
         if tensor_a.array.dtype != tensor_b.array.dtype:
             raise ValueError(
