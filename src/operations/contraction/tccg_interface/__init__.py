@@ -30,21 +30,23 @@ def execute_tccg_contraction(
     Returns:
         Output tensor array in Fortran order.
     """
-    TCCGGenerator().generate_tccg_file(tensor_a, tensor_b, ordered_new_indices, tccg_impl_dir)
+    try:
+        TCCGGenerator().generate_tccg_file(tensor_a, tensor_b, ordered_new_indices, tccg_impl_dir)
 
-    discoverer = TCCGDiscoverer(tccg_impl_dir, tensor_a.array.dtype, tensor_b.array.dtype)
-    fn_name, param_count, cpp_path, has_work = discoverer.discover()
+        discoverer = TCCGDiscoverer(tccg_impl_dir, tensor_a.array.dtype, tensor_b.array.dtype)
+        fn_name, param_count, cpp_path, has_work = discoverer.discover()
 
-    dtype_str = "float"  # if tensor_a.array.dtype == np.float32 else "double"
-    compiler = TCCGPyBind11Compiler(cpp_path, fn_name, param_count, dtype_str, has_work)
-    so_path = compiler.compile()
+        dtype_str = "float"  # if tensor_a.array.dtype == np.float32 else "double"
+        compiler = TCCGPyBind11Compiler(cpp_path, fn_name, param_count, dtype_str, has_work)
+        so_path = compiler.compile()
 
-    runtime = TCCGRuntime(so_path, fn_name, has_work, tensor_a.array.dtype)
+        runtime = TCCGRuntime(so_path, fn_name, has_work, tensor_a.array.dtype)
 
-    tensor_a_f = np.asfortranarray(tensor_a.array)
-    tensor_b_f = np.asfortranarray(tensor_b.array)
-    output = runtime.execute_contraction(tensor_a_f, tensor_b_f, new_tensor_shape)
+        tensor_a_f = np.asfortranarray(tensor_a.array)
+        tensor_b_f = np.asfortranarray(tensor_b.array)
+        output = runtime.execute_contraction(tensor_a_f, tensor_b_f, new_tensor_shape)
+        return output
 
-    shutil.rmtree(tccg_impl_dir)
-
-    return output
+    finally:
+        shutil.rmtree(tccg_impl_dir)
+        raise RuntimeError
