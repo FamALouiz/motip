@@ -42,7 +42,7 @@ class TCCGDiscoverer:
         else:
             raise ValueError(f"Unsupported dtype for TCCG: {self.tensor_a_dtype}")
 
-    def _parse_function_signature(self, cpp_content: str) -> tuple[str, int]:
+    def _parse_function_signature(self, cpp_content: str) -> tuple[str, int, bool]:
         """Parse generated .cpp to extract function name and parameter count.
 
         Args:
@@ -62,6 +62,8 @@ class TCCGDiscoverer:
             raise ValueError("Could not parse function signature from generated .cpp")
 
         match = match if match else match_with_gett
+        assert match
+
         fn_name = match.group(1)
         params_str = match.group(2)
         cleaned_params = [p for p in params_str.split(",") if p.strip()]
@@ -69,7 +71,7 @@ class TCCGDiscoverer:
         has_work = any("work_" in p for p in cleaned_params)
         return fn_name, param_count, has_work
 
-    def discover(self) -> tuple[str, int, str]:
+    def discover(self) -> tuple[str, int, str, bool]:
         """Clean, generate TCCG, and discover function signature.
 
         Returns:

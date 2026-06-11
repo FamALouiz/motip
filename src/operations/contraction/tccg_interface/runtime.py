@@ -2,6 +2,7 @@
 
 import importlib.util
 from pathlib import Path
+from types import ModuleType
 
 import numpy as np
 
@@ -22,7 +23,7 @@ class TCCGRuntime:
         self.fn_name = fn_name
         self.has_work = has_work
         self.dtype = dtype
-        self.module = None
+        self.module: ModuleType | None = None
 
     def _load_module(self) -> None:
         """Load compiled extension module dynamically."""
@@ -33,6 +34,8 @@ class TCCGRuntime:
             if spec is None or spec.loader is None:
                 raise ImportError(f"Could not load spec from {self.so_path}")
             self.module = importlib.util.module_from_spec(spec)
+
+            assert self.module
             spec.loader.exec_module(self.module)
 
     def execute_contraction(
@@ -65,7 +68,7 @@ class TCCGRuntime:
 
             if workspace_bytes > 0:
                 work_buf = np.zeros(
-                    workspace_bytes // self.dtype().itemsize, dtype=self.dtype, order="F"
+                    workspace_bytes // self.dtype.itemsize, dtype=self.dtype, order="F"
                 )
                 getattr(self.module, self.fn_name)(
                     tensor_a, tensor_b, output, alpha, beta, work_buf
