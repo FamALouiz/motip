@@ -62,12 +62,15 @@ def _contract_tensors(tensor_a: Tensor, tensor_b: Tensor, use_tccg: bool = False
     new_array = None
     if tensor_a.array is not None and tensor_b.array is not None:
         if use_tccg:
-            new_array = execute_tccg_contraction(
-                tensor_a,
-                tensor_b,
-                ordered_new_indices,
-                tuple(new_tensor_shape),
-            )
+            try:
+                new_array = execute_tccg_contraction(
+                    tensor_a,
+                    tensor_b,
+                    ordered_new_indices,
+                    tuple(new_tensor_shape),
+                )
+            except Exception:
+                new_array = _contract_tensor_arrays(tensor_a, tensor_b)
         else:
             new_array = _contract_tensor_arrays(tensor_a, tensor_b)
 
