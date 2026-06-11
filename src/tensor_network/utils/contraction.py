@@ -30,6 +30,7 @@ def apply_operations_to_network(
         network_tensors[i] = (
             operations[i].apply(tensor_operation_result_from_tensor(network_tensors[i])).tensor
         )
+        print(f"Applying operation {i + 1}")
 
     for step, contraction_pair in enumerate(contraction_path):
         pair_idx_0, pair_idx_1 = contraction_pair
@@ -47,12 +48,16 @@ def apply_operations_to_network(
             .tensor
         )
 
+        print(f"Applying operation {contraction_op_idx + 1}")
+
         perm_op_idx = num_initial_tensors + 2 * step + 1
         permuted_tensor = (
             operations[perm_op_idx]
             .apply(tensor_operation_result_from_tensor(contracted_tensor), use_hptt=use_hptt)  # type: ignore[arg-type]
             .tensor
         )
+
+        print(f"Applying operation {perm_op_idx + 1}")
 
         if pair_idx_0 > pair_idx_1:
             network_tensors.pop(pair_idx_0)
