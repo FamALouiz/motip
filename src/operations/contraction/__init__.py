@@ -1,5 +1,8 @@
 """Contraction operations."""
 
+import os
+import subprocess
+from tempfile import TemporaryDirectory
 from typing import Any
 
 import numpy as np
@@ -65,6 +68,59 @@ def _contract_tensors(tensor_a: Tensor, tensor_b: Tensor) -> Tensor:
     return Tensor(ordered_new_indices, tuple(new_tensor_shape), new_array)
 
 
+def _contract_tensors_using_tccg(tensor_a: Tensor, tensor_b: Tensor) -> Tensor:
+    contracted_indices = get_contracted_indices(tensor_a, tensor_b)
+
+    ordered_final_indicies = []
+    for idx in tensor_a.input_indices:
+        if idx not in contracted_indices:
+            ordered_final_indicies.append(idx)
+    for idx in tensor_b.input_indices:
+        if idx not in contracted_indices:
+            ordered_final_indicies.append(idx)
+
+    _generate_tccg_file(tensor_a, tensor_b, ordered_final_indicies)
+
+
+def _generate_tccg_file(
+    tensor_a: Tensor, tensor_b: Tensor, ordered_final_indicies: list[int]
+) -> None:
+
+    def _idx_to_char(n: int) -> str:
+        result = ""
+        n += 1
+        while n > 0:
+            n, remainder = divmod(n - 1, 26)
+            result = chr(ord("A") + remainder) + result
+        return result.lower()
+
+    combined_size_dict = {}
+    for idx, size in zip(tensor_a.input_indices, tensor_a.shape, strict=True):
+        combined_size_dict[_idx_to_char(idx)] = size
+    for idx, size in zip(tensor_b.input_indices, tensor_b.shape, strict=True):
+        combined_size_dict[_idx_to_char(idx)] = size
+    with TemporaryDirectory() as temp_dir:
+        with open(os.path.join(temp_dir, "tccg_input.tccg"), "w") as f:
+            f.write(
+                f"C[{','.join(map(lambda x: _idx_to_char(x), ordered_final_indicies))}] = A[{','.join(map(lambda x: _idx_to_char(x), tensor_a.input_indices))}] * B[{','.join(map(lambda x: _idx_to_char(x), tensor_b.input_indices))}]\n"
+            )
+            for idx, size in combined_size_dict.items():
+                f.write(f"{idx} = {size}\n")
+        subprocess.run(
+            [
+                "tccg",
+                os.path.join(temp_dir, "tccg_input.tccg"),
+                "--noLoG",
+                "--compiler",
+                "g++",
+                "--numThreads",
+                str(os.cpu_count()),
+                "--verbose",
+            ],
+            check=True,
+        )
+
+
 class TensorContractionOperation(TensorOperation):
     """Class to represent a tensor contraction operation."""
 
@@ -78,10 +134,17 @@ class TensorContractionOperation(TensorOperation):
         **kwargs: dict[str, Any],
     ) -> TensorOperationResult:
         """Apply the tensor contraction operation."""
+        use_tccg = kwargs.get("use_tccg", False)
         if len(inputs) < 2:
             raise ValueError("At least two tensors are required for contraction.")
         if len(inputs) > 2:
             raise NotImplementedError("Contraction of more than two tensors is not implemented.")
-        return tensor_operation_result_from_tensor(
-            _contract_tensors(inputs[0].tensor, inputs[1].tensor)
-        )
+
+        if use_tccg:
+            return tensor_operation_result_from_tensor(
+                _contract_tensors_using_tccg(inputs[0].tensor, inputs[1].tensor)
+            )
+        else:
+            return tensor_operation_result_from_tensor(
+                _contract_tensors(inputs[0].tensor, inputs[1].tensor)
+            )
