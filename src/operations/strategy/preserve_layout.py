@@ -7,11 +7,11 @@ from memory.calculator import MemoryCalculator
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.permutation import Permutation
 from operations.permutation.utils import to_identity_permutation
-from operations.strategy import IPermutationStrategy
+from operations.strategy import IStrategy
 from tensor_network.tn import TensorNetwork
 
 
-class PreserveLayoutPermutationStrategy(IPermutationStrategy):
+class PreserveLayoutPermutationStrategy(IStrategy):
     """Preserve-layout permutation strategy.
 
     This strategy never changes the layout of any initial or intermediate tensor.

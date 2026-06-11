@@ -3,19 +3,19 @@
 from typing import Protocol, runtime_checkable
 
 from memory import Memory
+from operations.base import TensorOperation
 from operations.contraction.path import ContractionPath
-from operations.permutation import Permutation
 from tensor_network.tn import TensorNetwork
 
 
 @runtime_checkable
-class IPermutationStrategy(Protocol):
+class IStrategy(Protocol):
     """Interface for defining a permutation strategy."""
 
     @staticmethod
     def find_optimal_permutation(
         network: TensorNetwork, contraction_path: ContractionPath
-    ) -> tuple[list[Permutation], list[Permutation]]:
+    ) -> list[TensorOperation]:
         """Find the optimal tensor permutation for a given contraction path.
 
         Args:
@@ -23,10 +23,7 @@ class IPermutationStrategy(Protocol):
             contraction_path: The contraction path for which to find the optimal permutation.
 
         Returns:
-            A tuple of 2 components:
-                - A list of optimal tensor index permutations for each initial tensor in the network
-                - A list of optimal tensor index permutations for each intermediate tensor in the
-            contraction path
+            A list of tensor operations representing the optimal permutations.
         """
         ...
 

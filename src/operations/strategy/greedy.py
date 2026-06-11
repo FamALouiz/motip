@@ -9,12 +9,13 @@ from memory.utils import (
     get_largest_k_intermediate_tensors_in_path,
     get_largest_k_tensors_in_network,
 )
+from operations.base import TensorOperation
 from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.contraction.tree import ContractionTreeNode
 from operations.permutation import Permutation
 from operations.permutation.utils import to_permutation
-from operations.strategy import IPermutationStrategy
+from operations.strategy import IStrategy
 from operations.strategy.common import (
     build_tree_maps,
     get_step_tensors,
@@ -217,7 +218,7 @@ def _find_top_k_peak_nodes(
     return sorted(selected, key=lambda node: node.is_leaf, reverse=True)
 
 
-class GreedyPermutationStrategy(IPermutationStrategy):
+class GreedyPermutationStrategy(IStrategy):
     """Greedy strategy for finding optimal tensor permutations for a contraction path."""
 
     @staticmethod
@@ -226,7 +227,7 @@ class GreedyPermutationStrategy(IPermutationStrategy):
         network: TensorNetwork,
         contraction_path: ContractionPath,
         k: int = 1,
-    ) -> tuple[list[Permutation], list[Permutation]]:
+    ) -> list[TensorOperation]:
         """Find optimal initial and intermediate permutations for a contraction path.
 
         The greedy strategy identifies the largest k tensors in the contraction path and treats

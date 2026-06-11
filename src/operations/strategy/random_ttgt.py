@@ -11,7 +11,7 @@ from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.permutation import Permutation
 from operations.permutation.utils import to_identity_permutation
-from operations.strategy import IPermutationStrategy
+from operations.strategy import IStrategy
 from operations.strategy.common import (
     apply_layout_to_tensor,
     build_tree_maps,
@@ -99,7 +99,7 @@ def _get_random_result_layout(
     return [idx for idx in layout if idx in result_tensor.input_indices]
 
 
-class RandomTTGTPermutationStrategy(IPermutationStrategy):
+class RandomTTGTPermutationStrategy(IStrategy):
     """Random TTGT-style permutation strategy.
 
     This strategy samples random permutations that preserve TTGT-valid grouping.

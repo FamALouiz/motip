@@ -9,7 +9,7 @@ from operations.contraction.path import ContractionPath, PersistentContractionPa
 from operations.contraction.tree import ContractionTree, ContractionTreeNode
 from operations.permutation import Permutation
 from operations.permutation.utils import to_permutation
-from operations.strategy import IPermutationStrategy
+from operations.strategy import IStrategy
 from operations.strategy.common import get_step_tensors, sort_indices_by_size
 from tensor_network.tn import TensorNetwork
 
@@ -35,7 +35,7 @@ def _get_optimal_layout_for_tensor(
     return contracted_sorted + free_sorted
 
 
-class LocalOptimalPermutationStrategy(IPermutationStrategy):
+class LocalOptimalPermutationStrategy(IStrategy):
     """Local optimal permutation strategy for tensor network contraction.
 
     This strategy determines the optimal permutation for each intermediate contraction step

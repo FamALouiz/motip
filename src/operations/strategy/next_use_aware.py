@@ -7,7 +7,7 @@ from memory.calculator import MemoryCalculator
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.permutation import Permutation
 from operations.permutation.utils import to_identity_permutation
-from operations.strategy import IPermutationStrategy
+from operations.strategy import IStrategy
 from operations.strategy.common import (
     apply_layout_to_tensor,
     build_tree_maps,
@@ -17,7 +17,7 @@ from operations.strategy.common import (
 from tensor_network.tn import TensorNetwork
 
 
-class NextUseAwarePermutationStrategy(IPermutationStrategy):
+class NextUseAwarePermutationStrategy(IStrategy):
     """Next-use-aware permutation strategy.
 
     This strategy chooses each tensor's layout based on the way it will be used

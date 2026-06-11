@@ -29,7 +29,7 @@ if str(SRC) not in sys.path:
 
 from sweep_script import AbstractSweepScript  # noqa: E402
 
-from operations.strategy import IPermutationStrategy  # noqa: E402
+from operations.strategy import IStrategy  # noqa: E402
 from operations.strategy.canonical_contracted_first import (  # noqa: E402
     CanonicalContractedFirstPermutationStrategy,
 )
@@ -72,7 +72,7 @@ class MemoryComparisonAggregate:
     total_values: dict[SweepKey, int] = field(default_factory=dict)
 
 
-def get_strategies() -> list[type[IPermutationStrategy]]:
+def get_strategies() -> list[type[IStrategy]]:
     """Return all permutation strategies in this repository."""
     return [
         GreedyPermutationStrategy,
@@ -85,7 +85,7 @@ def get_strategies() -> list[type[IPermutationStrategy]]:
     ]
 
 
-def strategy_kwargs(strategy_cls: type[IPermutationStrategy], seed: int) -> dict[str, int]:
+def strategy_kwargs(strategy_cls: type[IStrategy], seed: int) -> dict[str, int]:
     """Provide kwargs for strategies that accept optional seed parameters."""
     kwargs: dict[str, int] = {}
     peak_sig = inspect.signature(strategy_cls.get_peak_memory)
@@ -97,7 +97,7 @@ def strategy_kwargs(strategy_cls: type[IPermutationStrategy], seed: int) -> dict
 
 def build_rows_from_aggregates(
     args: argparse.Namespace,
-    strategies: list[type[IPermutationStrategy]],
+    strategies: list[type[IStrategy]],
     peak_values: dict[SweepKey, int],
     total_values: dict[SweepKey, int],
 ) -> list[Row]:

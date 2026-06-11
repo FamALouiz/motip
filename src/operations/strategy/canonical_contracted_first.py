@@ -8,7 +8,7 @@ from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.permutation import Permutation
 from operations.permutation.utils import to_identity_permutation
-from operations.strategy import IPermutationStrategy
+from operations.strategy import IStrategy
 from operations.strategy.common import (
     apply_layout_to_tensor,
     build_tree_maps,
@@ -42,7 +42,7 @@ def _get_contracted_first_layout(
     return contracted_sorted + free_sorted
 
 
-class CanonicalContractedFirstPermutationStrategy(IPermutationStrategy):
+class CanonicalContractedFirstPermutationStrategy(IStrategy):
     """Canonical contracted-first permutation strategy.
 
     This strategy always places contracted indices before free indices for
