@@ -102,7 +102,7 @@ def _generate_tccg_file(
     with TemporaryDirectory() as temp_dir:
         with open(os.path.join(temp_dir, "tccg_input.tccg"), "w") as f:
             f.write(
-                f"C[{','.join(map(lambda x: _idx_to_char(x), ordered_final_indicies))}] = A[{','.join(map(lambda x: _idx_to_char(x), tensor_a.input_indices))}] * B[{','.join(map(lambda x: _idx_to_char(x), tensor_b.input_indices))}]\n"
+                f"C[{','.join(map(lambda x: _idx_to_char(x), ordered_final_indicies))}] = A[{','.join(map(lambda x: _idx_to_char(x), tensor_a.input_indices))}] * B[{','.join(map(lambda x: _idx_to_char(x), tensor_b.input_indices))}]\n"  # noqa: E501
             )
             for idx, size in combined_size_dict.items():
                 f.write(f"{idx} = {size}\n")
