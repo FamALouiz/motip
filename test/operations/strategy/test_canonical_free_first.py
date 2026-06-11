@@ -7,8 +7,8 @@ from operations.contraction.path import ContractionPath
 from operations.strategy.canonical_free_first import (
     CanonicalFreeFirstPermutationStrategy,
 )
-from test.operations.strategy.helpers import extract_strategy_permutations
 from tensor_network import TensorNetwork
+from test.operations.strategy.helpers import extract_strategy_permutations
 
 
 @pytest.fixture

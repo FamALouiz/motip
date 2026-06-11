@@ -8,8 +8,8 @@ from memory import Memory
 from operations.contraction import get_contracted_indices
 from operations.contraction.path import ContractionPath
 from operations.strategy.random_ttgt import RandomTTGTPermutationStrategy
-from test.operations.strategy.helpers import extract_strategy_permutations
 from tensor_network import TensorNetwork
+from test.operations.strategy.helpers import extract_strategy_permutations
 
 
 @pytest.fixture

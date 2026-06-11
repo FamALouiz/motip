@@ -3,8 +3,8 @@
 from memory import Memory
 from operations.contraction.path import ContractionPath
 from operations.strategy.local_optimal import LocalOptimalPermutationStrategy
-from test.operations.strategy.helpers import extract_strategy_permutations
 from tensor_network import TensorNetwork
+from test.operations.strategy.helpers import extract_strategy_permutations
 
 
 class TestLocalOptimalPermutationStrategy:
