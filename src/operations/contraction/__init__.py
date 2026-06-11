@@ -81,6 +81,8 @@ def _contract_tensors_using_tccg(tensor_a: Tensor, tensor_b: Tensor) -> Tensor:
 
     _generate_tccg_file(tensor_a, tensor_b, ordered_final_indicies)
 
+    return NotImplemented  # TODO
+
 
 def _generate_tccg_file(
     tensor_a: Tensor, tensor_b: Tensor, ordered_final_indicies: list[int]
@@ -104,8 +106,8 @@ def _generate_tccg_file(
             f.write(
                 f"C[{','.join(map(lambda x: _idx_to_char(x), ordered_final_indicies))}] = A[{','.join(map(lambda x: _idx_to_char(x), tensor_a.input_indices))}] * B[{','.join(map(lambda x: _idx_to_char(x), tensor_b.input_indices))}]\n"  # noqa: E501
             )
-            for idx, size in combined_size_dict.items():
-                f.write(f"{idx} = {size}\n")
+            for key, value in combined_size_dict.items():
+                f.write(f"{key} = {value}\n")
         subprocess.run(
             [
                 "tccg",
