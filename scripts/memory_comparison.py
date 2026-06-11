@@ -29,21 +29,21 @@ if str(SRC) not in sys.path:
 
 from sweep_script import AbstractSweepScript  # noqa: E402
 
-from operations.permutation.strategy import IPermutationStrategy  # noqa: E402
-from operations.permutation.strategy.canonical_contracted_first import (  # noqa: E402
+from operations.strategy import IPermutationStrategy  # noqa: E402
+from operations.strategy.canonical_contracted_first import (  # noqa: E402
     CanonicalContractedFirstPermutationStrategy,
 )
-from operations.permutation.strategy.canonical_free_first import (  # noqa: E402
+from operations.strategy.canonical_free_first import (  # noqa: E402
     CanonicalFreeFirstPermutationStrategy,
 )
-from operations.permutation.strategy.greedy import GreedyPermutationStrategy  # noqa: E402
-from operations.permutation.strategy.local_optimal import (  # noqa: E402
+from operations.strategy.greedy import GreedyPermutationStrategy  # noqa: E402
+from operations.strategy.local_optimal import (  # noqa: E402
     LocalOptimalPermutationStrategy,
 )
-from operations.permutation.strategy.next_use_aware import (  # noqa: E402
+from operations.strategy.next_use_aware import (  # noqa: E402
     NextUseAwarePermutationStrategy,
 )
-from operations.permutation.strategy.preserve_layout import (  # noqa: E402
+from operations.strategy.preserve_layout import (  # noqa: E402
     PreserveLayoutPermutationStrategy,
 )
 from tensor_network.utils.random import generate_random_tn  # noqa: E402
