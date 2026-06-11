@@ -1,13 +1,11 @@
 """Contraction operations."""
 
-import os
-import subprocess
-from tempfile import TemporaryDirectory
 from typing import Any
 
 import numpy as np
 
 from operations.base import TensorOperation, TensorOperationResult
+from operations.contraction.tccg_interface import execute_tccg_contraction
 from operations.utils import tensor_operation_result_from_tensor
 from tensor import Tensor
 
@@ -64,51 +62,16 @@ def _contract_tensors(tensor_a: Tensor, tensor_b: Tensor, use_tccg: bool = False
     new_array = None
     if tensor_a.array is not None and tensor_b.array is not None:
         if use_tccg:
-            _generate_tccg_file(tensor_a, tensor_b, ordered_new_indices)
-            raise NotImplementedError("TCCG integration is not yet implemented.")  # TODO
+            new_array = execute_tccg_contraction(
+                tensor_a.array,
+                tensor_b.array,
+                ordered_new_indices,
+                tuple(new_tensor_shape),
+            )
         else:
             new_array = _contract_tensor_arrays(tensor_a, tensor_b)
 
     return Tensor(ordered_new_indices, tuple(new_tensor_shape), new_array)
-
-
-def _generate_tccg_file(
-    tensor_a: Tensor, tensor_b: Tensor, ordered_final_indicies: list[int]
-) -> None:
-
-    def _idx_to_char(n: int) -> str:
-        result = ""
-        n += 1
-        while n > 0:
-            n, remainder = divmod(n - 1, 26)
-            result = chr(ord("A") + remainder) + result
-        return result.lower()
-
-    combined_size_dict = {}
-    for idx, size in zip(tensor_a.input_indices, tensor_a.shape, strict=True):
-        combined_size_dict[_idx_to_char(idx) if isinstance(idx, int) else idx] = size
-    for idx, size in zip(tensor_b.input_indices, tensor_b.shape, strict=True):
-        combined_size_dict[_idx_to_char(idx) if isinstance(idx, int) else idx] = size
-    with TemporaryDirectory() as temp_dir:
-        with open(os.path.join(temp_dir, "tccg_input.tccg"), "w") as f:
-            f.write(
-                f"C[{','.join(map(lambda x: _idx_to_char(x) if isinstance(x, int) else x, ordered_final_indicies))}] = A[{','.join(map(lambda x: _idx_to_char(x) if isinstance(x, int) else x, tensor_a.input_indices))}] * B[{','.join(map(lambda x: _idx_to_char(x) if isinstance(x, int) else x, tensor_b.input_indices))}]\n"  # noqa: E501
-            )
-            for key, value in combined_size_dict.items():
-                f.write(f"{key} = {value}\n")
-        subprocess.run(
-            [
-                "tccg",
-                os.path.join(temp_dir, "tccg_input.tccg"),
-                "--noLoG",
-                "--compiler",
-                "g++",
-                "--numThreads",
-                str(os.cpu_count()),
-                "--verbose",
-            ],
-            check=True,
-        )
 
 
 class TensorContractionOperation(TensorOperation):
