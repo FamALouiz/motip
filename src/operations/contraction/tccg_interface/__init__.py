@@ -33,10 +33,10 @@ def execute_tccg_contraction(
     TCCGGenerator().generate_tccg_file(tensor_a, tensor_b, ordered_new_indices, tccg_impl_dir)
 
     discoverer = TCCGDiscoverer(tccg_impl_dir, tensor_a.array.dtype, tensor_b.array.dtype)
-    fn_name, param_count, cpp_path = discoverer.discover()
+    fn_name, param_count, cpp_path, has_work = discoverer.discover()
 
-    dtype_str = "float" if tensor_a.array.dtype == np.float32 else "double"
-    compiler = TCCGPyBind11Compiler(cpp_path, fn_name, param_count, dtype_str)
+    dtype_str = "float"  # if tensor_a.array.dtype == np.float32 else "double"
+    compiler = TCCGPyBind11Compiler(cpp_path, fn_name, param_count, dtype_str, has_work)
     so_path = compiler.compile()
 
     runtime = TCCGRuntime(so_path, fn_name, param_count == 7, tensor_a.array.dtype)

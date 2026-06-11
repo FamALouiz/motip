@@ -18,7 +18,9 @@ BLIS_ROOT = Path(os.environ["BLIS_ROOT"])
 class TCCGPyBind11Compiler:
     """Generates and compiles pybind11 wrapper for TCCG functions."""
 
-    def __init__(self, cpp_path: str, fn_name: str, param_count: int, dtype_str: str):
+    def __init__(
+        self, cpp_path: str, fn_name: str, param_count: int, dtype_str: str, has_work: bool
+    ):
         """Initialize the compiler.
 
         Args:
@@ -26,12 +28,13 @@ class TCCGPyBind11Compiler:
             fn_name: Name of the generated TCCG function.
             param_count: Number of parameters in function signature.
             dtype_str: Either 'float' or 'double'.
+            has_work: If work_ is included in the signature
         """
         self.cpp_path = Path(cpp_path)
         self.fn_name = fn_name
         self.param_count = param_count
         self.dtype_str = dtype_str
-        self.has_work = param_count == 7
+        self.has_work = has_work
 
     def _generate_wrapper_source(self) -> str:
         """Generate pybind11 wrapper source code.

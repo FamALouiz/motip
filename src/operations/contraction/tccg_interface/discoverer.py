@@ -61,9 +61,10 @@ class TCCGDiscoverer:
 
         fn_name = match.group(1)
         params_str = match.group(2)
-        param_count = len([p for p in params_str.split(",") if p.strip()])
-
-        return fn_name, param_count
+        cleaned_params = [p for p in params_str.split(",") if p.strip()]
+        param_count = len(cleaned_params)
+        has_work = any("work_" in p for p in cleaned_params)
+        return fn_name, param_count, has_work
 
     def discover(self) -> tuple[str, int, str]:
         """Clean, generate TCCG, and discover function signature.
@@ -74,8 +75,8 @@ class TCCGDiscoverer:
         for cpp_file in self.tccg_impl_dir.glob("*.cpp"):
             with open(cpp_file, "r") as f:
                 content = f.read()
-                fn_name, param_count = self._parse_function_signature(content)
-                return fn_name, param_count, str(cpp_file)
+                fn_name, param_count, has_work = self._parse_function_signature(content)
+                return fn_name, param_count, str(cpp_file), has_work
 
         raise FileNotFoundError(
             f"No generated .cpp file found in {self.tccg_impl_dir}. "
