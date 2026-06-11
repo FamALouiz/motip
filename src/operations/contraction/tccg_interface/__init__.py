@@ -31,7 +31,7 @@ def execute_tccg_contraction(
         Output tensor array in Fortran order.
     """
     try:
-        assert tensor_a.array and tensor_b.array
+        assert tensor_a.array is not None and tensor_b.array is not None
         TCCGGenerator().generate_tccg_file(tensor_a, tensor_b, ordered_new_indices, tccg_impl_dir)
 
         discoverer = TCCGDiscoverer(tccg_impl_dir, tensor_a.array.dtype, tensor_b.array.dtype)

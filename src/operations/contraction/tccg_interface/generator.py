@@ -55,7 +55,7 @@ class TCCGGenerator:
             tensor_b_indices: Input indices for tensor_b.
             tccg_impl_dir: Path to tccg_implementations directory.
         """
-        assert tensor_a.array and tensor_b.array
+        assert tensor_a.array is not None and tensor_b.array is not None
         implementation_dir = Path(tccg_impl_dir)
         implementation_dir.mkdir(parents=True, exist_ok=True)
 
