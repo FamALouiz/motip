@@ -55,10 +55,13 @@ class TCCGDiscoverer:
             ValueError: If function signature cannot be parsed.
         """
         pattern = r"int\s+(\w+)\s*\((.*?)\)"
+        pattern_for_gett = r"void\s+(\w+)\s*\((.*?)\)"
         match = re.search(pattern, cpp_content)
-        if not match:
+        match_with_gett = re.search(pattern_for_gett, cpp_content)
+        if not match and not match_with_gett:
             raise ValueError("Could not parse function signature from generated .cpp")
 
+        match = match if match else match_with_gett
         fn_name = match.group(1)
         params_str = match.group(2)
         cleaned_params = [p for p in params_str.split(",") if p.strip()]
