@@ -21,12 +21,17 @@ class TestApplyOperationsToNetwork:
         assert isinstance(result, Tensor)
         assert result.input_indices == [1, 0]
         assert result.shape == (3, 2)
+        assert result.array is not None
+        assert a.array is not None  # guard assertion
         assert np.array_equal(result.array, np.transpose(a.array, (1, 0)))
 
     def test_apply_contraction_and_permutation(self) -> None:
         """Test applying a contraction followed by a permutation to the resulting tensor."""
         a = Tensor([0, 1], (2, 3), np.arange(6).reshape(2, 3).astype(float))
         b = Tensor([1, 2], (3, 4), np.arange(12).reshape(3, 4).astype(float))
+
+        assert a.array is not None and b.array is not None  # guard assertions
+
         initial_ops = [TensorPermutationOperation([0, 1]), TensorPermutationOperation([0, 1])]
         contraction_op = TensorContractionOperation([])
         perm_after = TensorPermutationOperation([1, 0])
@@ -37,4 +42,5 @@ class TestApplyOperationsToNetwork:
         expected_permuted = np.transpose(expected_contracted, (1, 0))
         assert result.input_indices == [2, 0]
         assert result.shape == expected_permuted.shape
+        assert result.array is not None
         assert np.array_equal(result.array, expected_permuted)

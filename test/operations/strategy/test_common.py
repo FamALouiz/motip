@@ -5,9 +5,9 @@ from typing import Collection
 import pytest
 
 from operations.contraction import TensorContractionOperation
-from operations.contraction.path import PersistentContractionPath
+from operations.contraction.path import ContractionPath, PersistentContractionPath
 from operations.contraction.tree import ContractionTree
-from operations.permutation import TensorPermutationOperation
+from operations.permutation import Permutation, TensorPermutationOperation
 from operations.strategy.common import (
     build_tree_maps,
     get_input_layout_for_parent_use,
@@ -218,9 +218,9 @@ class TestToTensorOperations:
 
     def test_to_tensor_operations(self) -> None:
         """Test that the correct tensor operations are returned."""
-        initial_permutations = [[0, 1], [1, 0]]
-        intermediate_permutations = [[0, 2]]
-        contraction_path = [(0, 1)]
+        initial_permutations: list[Permutation] = [[0, 1], [1, 0]]
+        intermediate_permutations: list[Permutation] = [[0, 2]]
+        contraction_path: ContractionPath = [(0, 1)]
         result = to_tensor_operations(
             initial_permutations, intermediate_permutations, contraction_path
         )
@@ -236,8 +236,8 @@ class TestToTensorOperations:
 
     def test_to_tensor_operations_with_mismatching_lengths_should_raise(self) -> None:
         """Test that a ValueError is raised if the lengths of the input lists do not match."""
-        initial_permutations = [[0, 1]]
-        intermediate_permutations = [[0, 2], [2, 0]]
-        contraction_path = [(0, 1)]
+        initial_permutations: list[Permutation] = [[0, 1]]
+        intermediate_permutations: list[Permutation] = [[0, 2], [2, 0]]
+        contraction_path: ContractionPath = [(0, 1)]
         with pytest.raises(ValueError):
             to_tensor_operations(initial_permutations, intermediate_permutations, contraction_path)

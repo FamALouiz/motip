@@ -1,6 +1,7 @@
 """Contraction utils for tensor networks."""
 
 from copy import deepcopy
+from typing import Sequence
 
 from operations.base import TensorOperation
 from operations.contraction.path import ContractionPath
@@ -9,8 +10,8 @@ from tensor import Tensor
 
 
 def apply_operations_to_network(
-    tensors: list[Tensor],
-    operations: list[TensorOperation],
+    tensors: Sequence[Tensor],
+    operations: Sequence[TensorOperation],
     contraction_path: ContractionPath,
     use_tccg: bool = True,
     use_hptt: bool = True,
@@ -22,7 +23,7 @@ def apply_operations_to_network(
     path, applying contractions and subsequent permutations at each step, until only one tensor
     remains.
     """
-    network_tensors = deepcopy(tensors)
+    network_tensors = list(deepcopy(tensors))
 
     num_initial_tensors = len(tensors)
     for i in range(num_initial_tensors):
