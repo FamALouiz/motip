@@ -37,7 +37,7 @@ def execute_tccg_contraction(
         discoverer = TCCGDiscoverer(tccg_impl_dir, tensor_a.array.dtype, tensor_b.array.dtype)
         fn_name, param_count, cpp_path, has_work = discoverer.discover()
 
-        dtype_str = "float"  # if tensor_a.array.dtype == np.float32 else "double" #
+        dtype_str = "double"  # if tensor_a.array.dtype == np.float32 else "double" #
         compiler = TCCGPyBind11Compiler(cpp_path, fn_name, param_count, dtype_str, has_work)
         so_path = compiler.compile()
 

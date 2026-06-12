@@ -97,6 +97,8 @@ class TCCGGenerator:
             "g++",
             "--numThreads",
             str(os.cpu_count()),
+            "--floatType",
+            "d",
             "--verbose",
         ]
-        subprocess.run(compiled_command, check=True, capture_output=True)
+        subprocess.run(compiled_command, check=True, capture_output=False)
