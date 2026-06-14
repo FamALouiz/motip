@@ -21,8 +21,10 @@ jobs:
 
       - name: Install uv
         run: pip install uv
+      
       - name: Install dev dependencies
         run: uv sync --frozen
+
       - name: Install hptt
         run: cd libs/hptt && make scalar && cd pythonAPI && uv run python setup.py install && export HPTT_ROOT=/home/runner/work/motip/motip/libs/hptt/pythonAPI/../
 
