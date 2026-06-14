@@ -33,6 +33,7 @@ from sweep_script import AbstractSweepScript  # noqa: E402
 
 from operations.contraction.path import ContractionPath  # noqa: E402
 from operations.strategy.greedy import GreedyPermutationStrategy  # noqa: E402
+from operations.strategy.local_optimal import LocalOptimalPermutationStrategy  # noqa: E402
 from tensor_network.tn import TensorNetwork  # noqa: E402
 from tensor_network.utils.random import generate_random_tn  # noqa: E402
 
@@ -169,7 +170,15 @@ def run_baseline_contraction(
     monitor_thread.join(timeout=1.0)
 
     memory = monitor.stop()
-    return memory
+
+    # Cotengra calculates the abstract peak memory with no permutations, so a local optimal
+    # assumption is used here
+    return MemorySnapshot(
+        LocalOptimalPermutationStrategy.get_peak_memory(
+            network, contraction_tree.get_path()
+        ).to_bytes,
+        memory.total_bytes,
+    )
 
 
 def run_greedy_contraction(
