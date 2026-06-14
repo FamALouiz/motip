@@ -19,7 +19,7 @@ def _permute_tensor(tensor: Tensor, permutation: Permutation, use_hptt: bool = F
             f"Expected a permutation of the integers from 0 to {len(tensor.input_indices) - 1}, "
             f"got {permutation}."
         )
-    if sorted(permutation) == list(range(len(tensor.input_indices))) or len(permutation) == 0:
+    if permutation == list(range(len(tensor.input_indices))) or len(permutation) == 0:
         return tensor
     permuted_array = None
     if tensor.array is not None:
