@@ -5,7 +5,6 @@ from typing import override
 from memory import Memory
 from memory.calculator import MemoryCalculator
 from memory.utils import (
-    get_largest_intermediate_tensor_in_path,
     get_largest_k_intermediate_tensors_in_path,
     get_largest_k_tensors_in_network,
 )
@@ -285,11 +284,11 @@ class GreedyPermutationStrategy(IStrategy):
             k,
         )
 
-        for node in peak_nodes:
-            if node.is_leaf:
-                raise NotImplementedError(
-                    "Greedy strategy does not currently support freezing leaf nodes."
-                )
+        # for node in peak_nodes:
+        #     if node.is_leaf:
+        #         raise NotImplementedError(
+        #             "Greedy strategy does not currently support freezing leaf nodes."
+        #         )
 
         frozen_node_ids = {id(node) for node in peak_nodes}
         desired_layout_by_node_id: dict[int, list[int]] = {}
@@ -427,9 +426,7 @@ class GreedyPermutationStrategy(IStrategy):
 
     @staticmethod
     def __calculate_memory_for_path(
-        network: TensorNetwork,
-        contraction_path: ContractionPath,
-        peak: bool = True,
+        network: TensorNetwork, contraction_path: ContractionPath, peak: bool = True, k: int = 1
     ) -> Memory:
         """Calculate memory usage for a contraction path.
 
@@ -437,6 +434,7 @@ class GreedyPermutationStrategy(IStrategy):
             network: The tensor network.
             contraction_path: The contraction path.
             peak: If True, return peak memory; if False, return total memory.
+            k: The number of top tensors to freeze (default 1)
 
         Returns:
             Memory usage based on peak or total calculation.
@@ -444,9 +442,8 @@ class GreedyPermutationStrategy(IStrategy):
         memory_calculator = MemoryCalculator()
         current_memory = memory_calculator.calculate_memory_for_tensors(network.tensors)
         persistent_path = PersistentContractionPath.from_contraction_path(network, contraction_path)
-        _, largest_memory = get_largest_intermediate_tensor_in_path(
-            network,
-            persistent_path,
+        _, largest_memories = get_largest_k_intermediate_tensors_in_path(
+            network, persistent_path, k
         )
         result_memory = current_memory
 
@@ -459,9 +456,10 @@ class GreedyPermutationStrategy(IStrategy):
             tensor_b_memory = memory_calculator.calculate_memory_for_tensor(tensor_b)
             current_memory += tensor_a_memory + tensor_b_memory
 
-            if tensor_a_memory >= largest_memory or tensor_b_memory >= largest_memory:
-                current_memory -= max(tensor_a_memory, tensor_b_memory)  # The largest intermediate
-                # tensor will not be permuted
+            if any(tensor_a_memory >= largest_memory for largest_memory in largest_memories):
+                current_memory -= tensor_a_memory
+            if any(tensor_b_memory >= largest_memory for largest_memory in largest_memories):
+                current_memory -= tensor_b_memory
 
             if peak:
                 result_memory = max(result_memory, current_memory)
@@ -482,16 +480,20 @@ class GreedyPermutationStrategy(IStrategy):
 
     @staticmethod
     @override
-    def get_peak_memory(network: TensorNetwork, contraction_path: ContractionPath) -> Memory:
+    def get_peak_memory(
+        network: TensorNetwork, contraction_path: ContractionPath, k: int = 1
+    ) -> Memory:
         """Calculate the peak memory usage for a given contraction path and tensor permutations."""
         return GreedyPermutationStrategy.__calculate_memory_for_path(
-            network, contraction_path, peak=True
+            network, contraction_path, peak=True, k=k
         )
 
     @staticmethod
     @override
-    def get_total_memory(network: TensorNetwork, contraction_path: ContractionPath) -> Memory:
+    def get_total_memory(
+        network: TensorNetwork, contraction_path: ContractionPath, k: int = 1
+    ) -> Memory:
         """Calculate the total memory movement for a contraction path and tensor permutations."""
         return GreedyPermutationStrategy.__calculate_memory_for_path(
-            network, contraction_path, peak=False
+            network, contraction_path, peak=False, k=k
         )
