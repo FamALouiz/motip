@@ -87,7 +87,7 @@ class AbstractSweepScript(ABC, Generic[WorkItemT, WorkResultT, AggregateT, Outpu
 
     def continue_on_error(self, args: argparse.Namespace) -> bool:
         """Return whether failed work items should be skipped."""
-        return False
+        return True
 
     def describe_run(
         self,
