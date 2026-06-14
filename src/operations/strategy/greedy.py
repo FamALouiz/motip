@@ -456,10 +456,16 @@ class GreedyPermutationStrategy(IStrategy):
             tensor_b_memory = memory_calculator.calculate_memory_for_tensor(tensor_b)
             current_memory += tensor_a_memory + tensor_b_memory
 
-            if any(tensor_a_memory >= largest_memory for largest_memory in largest_memories):
+            if k > 0 and any(
+                tensor_a_memory == largest_memory for largest_memory in largest_memories
+            ):
                 current_memory -= tensor_a_memory
-            if any(tensor_b_memory >= largest_memory for largest_memory in largest_memories):
+                k -= 1
+            if k > 0 and any(
+                tensor_b_memory == largest_memory for largest_memory in largest_memories
+            ):
                 current_memory -= tensor_b_memory
+                k -= 1
 
             if peak:
                 result_memory = max(result_memory, current_memory)

@@ -34,7 +34,6 @@ from sweep_script import AbstractSweepScript  # noqa: E402
 from operations.contraction.path import ContractionPath  # noqa: E402
 from operations.strategy.greedy import GreedyPermutationStrategy  # noqa: E402
 from tensor_network.tn import TensorNetwork  # noqa: E402
-from tensor_network.utils.contraction import apply_operations_to_network  # noqa: E402
 from tensor_network.utils.random import generate_random_tn  # noqa: E402
 
 Row = dict[str, int | float | str]
@@ -179,34 +178,16 @@ def run_greedy_contraction(
     k: int,
 ) -> MemorySnapshot:
     """Run contraction with greedy strategy and measure memory."""
-    monitor = MemoryMonitor()
-
-    operations = GreedyPermutationStrategy.find_optimal_permutation(
-        network,
-        contraction_path,
-        k=k,
+    return MemorySnapshot(
+        peak_bytes=GreedyPermutationStrategy.get_peak_memory(
+            network,
+            contraction_path,
+            k=k,
+        ).bytes,
+        total_bytes=GreedyPermutationStrategy.get_total_memory(
+            network, contraction_path=contraction_path, k=k
+        ).bytes,
     )
-
-    should_monitor = {"active": True}
-    monitor_thread = threading.Thread(
-        target=_run_monitor_update_loop, args=(monitor, should_monitor)
-    )
-    monitor_thread.daemon = True
-    monitor_thread.start()
-
-    apply_operations_to_network(
-        list(network.tensors),
-        operations,
-        contraction_path,
-        use_tccg=False,
-        use_hptt=False,
-    )
-
-    should_monitor["active"] = False
-    monitor_thread.join(timeout=1.0)
-
-    memory = monitor.stop()
-    return memory
 
 
 class GreedyStrategyBenchmarkScript(
