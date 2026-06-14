@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import multiprocessing as mp
+import os
 from abc import ABC, abstractmethod
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from typing import Generic, TypeVar
@@ -35,7 +36,8 @@ class AbstractSweepScript(ABC, Generic[WorkItemT, WorkResultT, AggregateT, Outpu
             "--num-workers",
             type=int,
             default=1,
-            help="Number of worker processes. Use 1 for sequential execution.",
+            help="Number of worker processes. Use 1 for sequential execution. "
+            "Use -1 for dynamic discovery of maximum number of workers",
         )
         parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose mode.")
 
@@ -45,8 +47,8 @@ class AbstractSweepScript(ABC, Generic[WorkItemT, WorkResultT, AggregateT, Outpu
 
     def __validate_internal_arguments(self, args: argparse.Namespace) -> None:
         """Validate shared arguments before the sweep begins."""
-        if args.num_workers < 1:
-            raise ValueError("num-workers must be >= 1")
+        if not (args.num_workers >= 1 or args.num_workers == -1):
+            raise ValueError("num-workers must be >= 1 or -1")
 
     @abstractmethod
     def validate_args(self, args: argparse.Namespace) -> None:
@@ -79,6 +81,8 @@ class AbstractSweepScript(ABC, Generic[WorkItemT, WorkResultT, AggregateT, Outpu
 
     def get_num_workers(self, args: argparse.Namespace) -> int:
         """Return the configured worker count."""
+        if args.num_workers < 0:
+            return os.cpu_count()
         return args.num_workers
 
     def should_run_parallel(self, args: argparse.Namespace) -> bool:
