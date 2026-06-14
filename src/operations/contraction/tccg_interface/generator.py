@@ -101,4 +101,4 @@ class TCCGGenerator:
             "d",
             "--verbose",
         ]
-        subprocess.run(compiled_command, check=True, capture_output=False)
+        subprocess.run(compiled_command, check=True, capture_output=True)
