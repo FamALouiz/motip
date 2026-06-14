@@ -96,7 +96,7 @@ class GreedyBenchmarkAggregate:
 class MemoryMonitor:
     """Monitor memory usage during tensor contractions."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         """Initialize the memory monitor."""
         self.process = psutil.Process()
         self.peak_rss = 0
@@ -388,7 +388,7 @@ def build_peak_memory_plot(rows: list[Row], output_path: Path) -> None:
     for key, values in by_size_k.items():
         baselines = [v[0] for v in values]
         greedy_vals = [v[1] for v in values]
-        by_size_k_avg[key] = (np.mean(baselines), np.mean(greedy_vals))
+        by_size_k_avg[key] = (float(np.mean(baselines)), float(np.mean(greedy_vals)))
 
     plt.figure(figsize=(12, 7))
     sizes = sorted(set(k[0] for k in by_size_k_avg.keys()))
@@ -420,7 +420,7 @@ def build_peak_memory_plot(rows: list[Row], output_path: Path) -> None:
     plt.xlabel("Tensor Network Size")
     plt.ylabel("Peak Memory (GB)")
     plt.title("Peak Memory: Baseline vs Greedy Strategy")
-    plt.xticks(x + width * len(ks) / 2, sizes)
+    plt.xticks(x + width * len(ks) / 2, sizes)  # type: ignore[arg-type]
     plt.legend(fontsize=8)
     plt.grid(True, alpha=0.3)
     plt.tight_layout()
@@ -443,7 +443,7 @@ def build_improvement_plot(rows: list[Row], output_path: Path, metric: str) -> N
 
     by_size_k_avg: dict[tuple[int, int], float] = {}
     for key, values in by_size_k.items():
-        by_size_k_avg[key] = np.mean(values)
+        by_size_k_avg[key] = float(np.mean(values))
 
     plt.figure(figsize=(12, 7))
     sizes = sorted(set(k[0] for k in by_size_k_avg.keys()))

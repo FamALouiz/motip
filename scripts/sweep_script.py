@@ -82,7 +82,7 @@ class AbstractSweepScript(ABC, Generic[WorkItemT, WorkResultT, AggregateT, Outpu
     def get_num_workers(self, args: argparse.Namespace) -> int:
         """Return the configured worker count."""
         if args.num_workers < 0:
-            return os.cpu_count()
+            return os.cpu_count() if os.cpu_count() is not None else 1  # type: ignore[assignment,return-value]
         return args.num_workers
 
     def should_run_parallel(self, args: argparse.Namespace) -> bool:
