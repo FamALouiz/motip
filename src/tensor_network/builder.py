@@ -1,6 +1,7 @@
 """Tensor network builder."""
 
 import cotengra as ctg
+from numpy import array as to_array
 from numpy import inf, ndarray, random
 
 from tensor import Tensor
@@ -177,7 +178,7 @@ class TensorNetworkBuilder:
         else:
             arrays.extend([None] * len(input_indices))
         tensors = [
-            Tensor(tensor_input_indices, shape, array)
+            Tensor(tensor_input_indices, shape, to_array(array))
             for tensor_input_indices, shape, array in zip(input_indices, shapes, arrays)
         ]
 
