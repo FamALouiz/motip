@@ -66,6 +66,6 @@ def apply_operations_to_network(
             network_tensors.pop(pair_idx_1)
             network_tensors.pop(pair_idx_0)
 
-        network_tensors.insert(min(pair_idx_0, pair_idx_1), permuted_tensor)
+        network_tensors.insert(pair_idx_0, permuted_tensor)
 
     return network_tensors[0]
