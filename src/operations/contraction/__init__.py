@@ -34,11 +34,32 @@ def _contract_tensor_arrays(tensor_a: Tensor, tensor_b: Tensor) -> np.ndarray:
     )
 
     contracted_indices = get_contracted_indices(tensor_a, tensor_b)
-    axes_a = tuple(tensor_a.input_indices.index(idx) for idx in contracted_indices)
-    axes_b = tuple(tensor_b.input_indices.index(idx) for idx in contracted_indices)
-    contracted_array = np.tensordot(tensor_a.array, tensor_b.array, axes=(axes_a, axes_b))
+    contracted_indices_list = [idx for idx in tensor_a.input_indices if idx in contracted_indices]
 
-    return contracted_array
+    a_contract_axes = [tensor_a.input_indices.index(idx) for idx in contracted_indices_list]
+    b_contract_axes = [tensor_b.input_indices.index(idx) for idx in contracted_indices_list]
+
+    a_free_axes = [
+        i for i, idx in enumerate(tensor_a.input_indices) if idx not in contracted_indices
+    ]
+    b_free_axes = [
+        i for i, idx in enumerate(tensor_b.input_indices) if idx not in contracted_indices
+    ]
+
+    a_transposed = np.transpose(tensor_a.array, axes=(*a_free_axes, *a_contract_axes))
+    b_transposed = np.transpose(tensor_b.array, axes=(*b_contract_axes, *b_free_axes))
+
+    a_shape_free = tuple(tensor_a.shape[i] for i in a_free_axes)
+    a_shape_contract = tuple(tensor_a.shape[i] for i in a_contract_axes)
+    b_shape_free = tuple(tensor_b.shape[i] for i in b_free_axes)
+
+    a_matrix = a_transposed.reshape((-1, int(np.prod(a_shape_contract, dtype=int))))
+    b_matrix = b_transposed.reshape((int(np.prod(a_shape_contract, dtype=int)), -1))
+
+    contracted_matrix = a_matrix @ b_matrix
+    result_shape = (*a_shape_free, *b_shape_free)
+
+    return contracted_matrix.reshape(result_shape)
 
 
 def _contract_tensors(tensor_a: Tensor, tensor_b: Tensor, use_tccg: bool = False) -> Tensor:
