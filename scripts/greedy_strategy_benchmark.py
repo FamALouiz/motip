@@ -33,8 +33,8 @@ from sweep_script import AbstractSweepScript  # noqa: E402
 
 from operations.contraction.path import ContractionPath  # noqa: E402
 from operations.strategy.greedy import GreedyPermutationStrategy  # noqa: E402
-from operations.strategy.local_optimal import LocalOptimalPermutationStrategy  # noqa: E402
 from tensor_network.tn import TensorNetwork  # noqa: E402
+from tensor_network.utils.contraction import apply_operations_to_network  # noqa: E402
 from tensor_network.utils.random import generate_random_tn  # noqa: E402
 
 Row = dict[str, int | float | str]
@@ -96,40 +96,47 @@ class GreedyBenchmarkAggregate:
 class MemoryMonitor:
     """Monitor memory usage during tensor contractions."""
 
-    def __init__(self) -> None:
+    def __init__(self, use_tracemalloc=False) -> None:
         """Initialize the memory monitor."""
         self.process = psutil.Process()
         self.peak_rss = 0
         self.initial_rss = 0
         self.total_allocated = 0
+        self.use_tracemalloc = use_tracemalloc
 
     def start(self) -> None:
         """Start monitoring memory."""
         self.process.memory_info()
         self.initial_rss = self.process.memory_info().rss
         self.peak_rss = self.initial_rss
+        self.previous_rss = self.initial_rss
         self.total_allocated = 0
         tracemalloc.start()
 
     def stop(self) -> MemorySnapshot:
         """Stop monitoring and return memory metrics."""
-        tracemalloc.stop()
         current_rss = self.process.memory_info().rss
         peak_rss = self.peak_rss
 
         if current_rss > peak_rss:
             peak_rss = current_rss
 
-        current, peak = tracemalloc.get_traced_memory()
-        total_allocated = peak
+        _, peak_traced = tracemalloc.get_traced_memory()
+        tracemalloc.stop()
 
-        return MemorySnapshot(peak_bytes=peak_rss, total_bytes=total_allocated)
+        if self.use_tracemalloc:
+            return MemorySnapshot(peak_bytes=peak_traced, total_bytes=self.total_allocated)
+        else:
+            return MemorySnapshot(peak_bytes=peak_rss, total_bytes=self.total_allocated)
 
     def update(self) -> None:
         """Update peak memory measurement."""
         current_rss = self.process.memory_info().rss
         if current_rss > self.peak_rss:
             self.peak_rss = current_rss
+
+        self.total_allocated += current_rss - self.previous_rss
+        self.previous_rss = current_rss
 
 
 def percentage_improvement(baseline: int, greedy: int) -> float:
@@ -153,17 +160,16 @@ def run_baseline_contraction(
 ) -> MemorySnapshot:
     """Run contraction without greedy strategy and measure memory."""
     monitor = MemoryMonitor()
-    monitor.start()
-
-    network_arrays = list(deepcopy(network.arrays))
 
     should_monitor = {"active": True}
     monitor_thread = threading.Thread(
         target=_run_monitor_update_loop, args=(monitor, should_monitor)
     )
     monitor_thread.daemon = True
+    monitor.start()
     monitor_thread.start()
 
+    network_arrays = list(deepcopy(network.arrays))
     contraction_tree.contract(network_arrays)
 
     should_monitor["active"] = False
@@ -171,14 +177,7 @@ def run_baseline_contraction(
 
     memory = monitor.stop()
 
-    # Cotengra calculates the abstract peak memory with no permutations, so a local optimal
-    # assumption is used here
-    return MemorySnapshot(
-        LocalOptimalPermutationStrategy.get_peak_memory(
-            network, contraction_tree.get_path()
-        ).to_bytes,
-        memory.total_bytes,
-    )
+    return memory
 
 
 def run_greedy_contraction(
@@ -187,16 +186,27 @@ def run_greedy_contraction(
     k: int,
 ) -> MemorySnapshot:
     """Run contraction with greedy strategy and measure memory."""
-    return MemorySnapshot(
-        peak_bytes=GreedyPermutationStrategy.get_peak_memory(
-            network,
-            contraction_path,
-            k=k,
-        ).bytes,
-        total_bytes=GreedyPermutationStrategy.get_total_memory(
-            network, contraction_path=contraction_path, k=k
-        ).bytes,
+    monitor = MemoryMonitor()
+    operations = GreedyPermutationStrategy.find_optimal_permutation(network, contraction_path, k)
+
+    should_monitor = {"active": True}
+    monitor_thread = threading.Thread(
+        target=_run_monitor_update_loop, args=(monitor, should_monitor)
     )
+    monitor_thread.daemon = True
+    monitor.start()
+    monitor_thread.start()
+
+    apply_operations_to_network(
+        network.tensors, operations, contraction_path, use_tccg=False, use_hptt=False
+    )
+
+    should_monitor["active"] = False
+    monitor_thread.join(timeout=1.0)
+
+    memory = monitor.stop()
+
+    return memory
 
 
 class GreedyStrategyBenchmarkScript(
