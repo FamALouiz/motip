@@ -178,7 +178,7 @@ class TensorNetworkBuilder:
         else:
             arrays.extend([None] * len(input_indices))
         tensors = [
-            Tensor(tensor_input_indices, shape, to_array(array))
+            Tensor(tensor_input_indices, shape, to_array(array) if array is not None else None)
             for tensor_input_indices, shape, array in zip(input_indices, shapes, arrays)
         ]
 
