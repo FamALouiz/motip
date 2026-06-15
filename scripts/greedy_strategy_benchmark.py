@@ -405,8 +405,8 @@ def build_peak_memory_plot(rows: list[Row], output_path: Path) -> None:
             key = (size, k)
             if key in by_size_k_avg:
                 b, g = by_size_k_avg[key]
-                baselines.append(b / 1e9)
-                greedy_vals.append(g / 1e9)
+                baselines.append(b / 1e6)
+                greedy_vals.append(g / 1e6)
             else:
                 baselines.append(0)
                 greedy_vals.append(0)
@@ -418,7 +418,8 @@ def build_peak_memory_plot(rows: list[Row], output_path: Path) -> None:
         )
 
     plt.xlabel("Tensor Network Size")
-    plt.ylabel("Peak Memory (GB)")
+    plt.ylabel("Peak Memory (MB)")
+    plt.yscale("log")
     plt.title("Peak Memory: Baseline vs Greedy Strategy")
     plt.xticks(x + width * len(ks) / 2, sizes)  # type: ignore[arg-type]
     plt.legend(fontsize=8)
