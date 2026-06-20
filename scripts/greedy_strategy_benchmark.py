@@ -96,7 +96,7 @@ class GreedyBenchmarkAggregate:
 class MemoryMonitor:
     """Monitor memory usage during tensor contractions."""
 
-    def __init__(self, use_tracemalloc=False) -> None:
+    def __init__(self, use_tracemalloc: bool=False) -> None:
         """Initialize the memory monitor."""
         self.process = psutil.Process()
         self.peak_rss = 0
@@ -198,7 +198,7 @@ def run_greedy_contraction(
     monitor_thread.start()
 
     apply_operations_to_network(
-        network.tensors, operations, contraction_path, use_tccg=False, use_hptt=False
+        list(network.tensors), operations, contraction_path, use_tccg=False, use_hptt=False
     )
 
     should_monitor["active"] = False
